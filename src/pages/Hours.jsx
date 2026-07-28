@@ -4,7 +4,7 @@ import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
 import { calcHoras, formatDate, formatMoney } from '../lib/calc.js';
 import { sumHours } from '../lib/aggregate.js';
-import { buildHoursReportHtml, downloadHtml } from '../lib/report.js';
+import { buildHoursReportHtml } from '../lib/report.js';
 import StatCard from '../components/StatCard.jsx';
 
 const emptyForm = {
@@ -25,6 +25,8 @@ export default function Hours() {
     hourly_rate: project.hourly_rate ?? 0,
     total_hours_sold: project.total_hours_sold ?? 0
   });
+  const [printStart, setPrintStart] = useState('');
+  const [printEnd, setPrintEnd] = useState('');
 
   const preview = calcHoras(form.start_time, form.end_time, form.lunch);
   const consumidas = sumHours(hours);
@@ -85,7 +87,13 @@ export default function Hours() {
   }
 
   function handlePrint() {
-    const html = buildHoursReportHtml({ project, hours });
+    const filtered = hours.filter((h) => (!printStart || h.date >= printStart) && (!printEnd || h.date <= printEnd));
+    const html = buildHoursReportHtml({
+      project,
+      hours: filtered,
+      periodStart: printStart || null,
+      periodEnd: printEnd || null
+    });
     const win = window.open('', '_blank');
     if (!win) {
       setError('Não foi possível abrir a janela de impressão. Verifique se o navegador está bloqueando pop-ups.');
@@ -95,11 +103,6 @@ export default function Hours() {
     win.document.write(html);
     win.document.close();
     win.onload = () => win.print();
-  }
-
-  function handleDownloadHtml() {
-    const html = buildHoursReportHtml({ project, hours });
-    downloadHtml(`relatorio-horas-${project.name.toLowerCase().replace(/\s+/g, '-')}.html`, html);
   }
 
   return (
@@ -199,9 +202,21 @@ export default function Hours() {
         </div>
       </form>
 
-      <div className="btn-row" style={{ marginBottom: 12 }}>
+      <div className="panel" style={{ marginBottom: 12 }}>
+        <div className="form-row" style={{ marginBottom: 12 }}>
+          <div className="field">
+            <label>Período do relatório — data inicial</label>
+            <input type="date" value={printStart} onChange={(e) => setPrintStart(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Período do relatório — data final</label>
+            <input type="date" value={printEnd} onChange={(e) => setPrintEnd(e.target.value)} />
+          </div>
+        </div>
+        <p className="muted" style={{ marginBottom: 12 }}>
+          Deixe em branco para imprimir todas as jornadas registradas.
+        </p>
         <button onClick={handlePrint}>🖨️ Imprimir / salvar como PDF</button>
-        <button onClick={handleDownloadHtml}>⬇️ Baixar relatório (HTML)</button>
       </div>
 
       <div className="panel table-scroll">

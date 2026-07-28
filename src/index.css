@@ -430,23 +430,3 @@ th {
   border-radius: 8px;
   border: 1px solid var(--border);
 }
-
-/* ---------- print report ---------- */
-
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #print-report,
-  #print-report * {
-    visibility: visible;
-  }
-  #print-report {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    color: #000;
-    background: #fff;
-  }
-}

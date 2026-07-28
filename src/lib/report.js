@@ -1,4 +1,5 @@
 import { formatDate } from './calc.js';
+import { LOGO_SVG_MARKUP } from './logo.js';
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -39,7 +40,8 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
 <title>Relatório de Horas — ${escapeHtml(project.name)}</title>
 <style>
   body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 24px; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
+  .report-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  h1 { font-size: 20px; margin: 0; }
   .muted { color: #555; font-size: 13px; }
   table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
   th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
@@ -51,7 +53,10 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
 </style>
 </head>
 <body>
-  <h1>Relatório de Horas — ${escapeHtml(project.name)}</h1>
+  <div class="report-header">
+    ${LOGO_SVG_MARKUP}
+    <h1>Relatório de Horas — ${escapeHtml(project.name)}</h1>
+  </div>
   <div class="muted">Período: ${periodo}</div>
   <div class="info-grid">
     <div><strong>Cliente:</strong> ${escapeHtml(project.client_name) || '—'}</div>
@@ -74,16 +79,4 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
   </div>
 </body>
 </html>`;
-}
-
-export function downloadHtml(filename, html) {
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
