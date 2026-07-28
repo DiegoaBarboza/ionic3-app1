@@ -3,7 +3,16 @@
 // que não têm acesso aos arquivos estáticos servidos pelo Vite.
 // Atualize este arquivo junto com public/logo-zenite.svg quando o logo mudar.
 export const LOGO_SVG_MARKUP = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="40" height="40">
-  <rect width="120" height="120" rx="20" fill="#161b22"/>
-  <path d="M30 34 H90 V46 L46 74 H90 V86 H30 V74 L74 46 H30 Z" fill="#c9ced6"/>
-  <path d="M58 62 L74 46 H90 L60 76 Z" fill="#2fb8dc"/>
+  <defs>
+    <linearGradient id="zMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f4f6f8"/>
+      <stop offset="35%" stop-color="#c9ced6"/>
+      <stop offset="55%" stop-color="#8b939c"/>
+      <stop offset="80%" stop-color="#c9ced6"/>
+      <stop offset="100%" stop-color="#eef0f2"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="20" fill="#12161d"/>
+  <path d="M26,30 H94 V44 L40,76 H94 V90 H26 V76 L80,44 H26 Z" fill="url(#zMetal)"/>
+  <path d="M69,52 L83,52 L55,68 L41,68 Z" fill="#2fb8dc"/>
 </svg>`;
