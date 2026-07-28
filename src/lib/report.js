@@ -1,5 +1,5 @@
 import { formatDate } from './calc.js';
-import { LOGO_SVG_MARKUP } from './logo.js';
+import { LOGO_DATA_URI } from './logo.js';
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,6 +41,7 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
 <style>
   body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 24px; }
   .report-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .report-header img { height: 36px; width: auto; }
   h1 { font-size: 20px; margin: 0; }
   .muted { color: #555; font-size: 13px; }
   table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
@@ -54,7 +55,7 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
 </head>
 <body>
   <div class="report-header">
-    ${LOGO_SVG_MARKUP}
+    <img src="${LOGO_DATA_URI}" alt="Zênite Robótica" />
     <h1>Relatório de Horas — ${escapeHtml(project.name)}</h1>
   </div>
   <div class="muted">Período: ${periodo}</div>
