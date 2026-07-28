@@ -1,0 +1,167 @@
+{
+  "info": {
+    "name": "F2U - Aplicação de Adesivo",
+    "hourlyRate": 192,
+    "totalHoursSold": 800,
+    "clientName": "Hutchinson",
+    "location": "Casa Branca - SP",
+    "clientContact": "Leandro Lanfredi",
+    "createdAt": "2026-07-13"
+  },
+  "entries": [],
+  "hours": [
+    {
+      "date": "2026-07-24",
+      "startTime": "07:00",
+      "endTime": "16:00",
+      "lunch": true,
+      "hours": 8,
+      "description": "Desenvolvimento das telas da IHM - (5) dados do módulo de aquecimento (referência e falha por zona); (6) alarmes; (7) produção/contadores;",
+      "id": "ms2qb872sgr03e"
+    },
+    {
+      "date": "2026-07-23",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Desenvolvimento das telas da IHM - (3) status da esteira de secagem com indicação de aprovação/reprovação por lado; (4) dados da bomba de aplicação de adesivo (velocidade, rotação, falhas);",
+      "id": "ms2q8wkfhmkxn3"
+    },
+    {
+      "date": "2026-07-22",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Desenvolvimento das telas da IHM - Desenvolvimento no DOPSoft das telas: (1) status inicial da célula / posição inicial; (2) dados da receita (seleção de lado, parâmetros de poka-yoke, aquecimento);",
+      "id": "ms2q7pq09qblfi"
+    },
+    {
+      "date": "2026-07-21",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Desenvolvimento de receitas (recipe management) - Estruturação de dados de receita contemplando seleção de lado (direito/esquerdo), parâmetros dos sensores de poka-yoke de cada esteira de entrada (conforme observação da tabela de I/O: \"deve ser inserido na receita\") e parâmetros de referência de aquecimento por zona, permitindo trocar de produto sem necessidade de reprogramação.",
+      "id": "ms2q60qd34mg97"
+    },
+    {
+      "date": "2026-07-20",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Lógica de aprovação/reprovação do vidro na saída - Programação da sinalização da coluna luminosa: LED verde de operação (OUT0), amarelo de aguardando parada por solicitação de abertura de porta (OUT1), vermelho de falha/fora de operação (OUT2) e alarme sonoro (OUT3). Sinalização específica de vidro aprovado/reprovado na saída da esteira de secagem, lado 1 (OUT4/OUT5) e lado 2 (OUT6/OUT7).",
+      "id": "ms2q4vxb0z5z7t"
+    },
+    {
+      "date": "2026-07-17",
+      "startTime": "07:00",
+      "endTime": "16:00",
+      "lunch": true,
+      "hours": 8,
+      "description": "Monitoramento de temperatura e refrigeração do vidro - Leitura das entradas analógicas dos termopares tipo J: temperatura do vidro lado 1 e lado 2 no módulo de aquecimento (IN100/IN101), temperatura na refrigeração lado 1 e lado 2 (IN102/IN103) e temperatura de segurança do módulo de aquecimento (IN105). Programação do acionamento dos ventiladores de refrigeração do vidro lado 1 e lado 2 (OUT24/OUT25) conforme lado selecionado na receita",
+      "id": "mrt7r6spifly5k"
+    },
+    {
+      "date": "2026-07-16",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Controle do módulo de aquecimento IR (14 zonas) - Programação das 14 saídas analógicas de referência 0-10Vcc para os módulos de aquecimento infravermelho (zonas 1 a 14, OUT100 a OUT113), com habilitação independente por lado — lado 1 (zonas 1-7, OUT36) e lado 2 (zonas 8-14, OUT37). Lógica de acionamento dos ventiladores do módulo (OUT23, ligados 1 segundo antes das lâmpadas de IR) e monitoramento de falha das zonas 1-7 e 8-14 (IN48/IN49).",
+      "id": "mrt7qdo5gfhgpx"
+    },
+    {
+      "date": "2026-07-15",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Controle da esteira de secagem / saída - Programação do acionamento do motor da esteira de secagem (OUT21), liberação de freio (OUT22) e referência de velocidade (saída analógica OUT118). Lógica de desaceleração e parada por meio dos sensores de parada 1 e 2 (IN42/IN43), e controle de presença de vidro lado 1 e lado 2 no início (IN40/IN41) e no final da esteira (IN44/IN45), com bloqueio de avanço quando ocupada",
+      "id": "mrt7pibb4kf7ke"
+    },
+    {
+      "date": "2026-07-14",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Controle da bomba de aplicação de adesivo (servo Delta) - Programação do sinal analógico de referência de velocidade da bomba de adesivo (saída OUT119, 0-10Vcc) para o servo drive Delta ASD-A2-0721-M / motor ECMA-C20807RS. Monitoramento do sinal de rotação da bomba (IN35) e de falha do servo (IN14). Lógica de abertura/fechamento das válvulas de aplicação do bico (OUT30/OUT31) e do feltro (OUT32/OUT33), e função de limpeza manual do bico acionada por botão dedicado (IN36).",
+      "id": "mrt7oxcntldbgk"
+    },
+    {
+      "date": "2026-07-13",
+      "startTime": "07:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 9,
+      "description": "Controle do eixo elétrico SMC (movimento do bico aplicador) - Programação da lógica de comunicação Ethernet/IP com o drive SMC JXC9H8-BC (192.168.16.205), responsável pelo eixo elétrico LEFSH32FH-500BCK. Desenvolvimento dos comandos de subida e descida do bico aplicador de adesivo, liberação de freio do motor do eixo (OUT38) e leitura do sensor de posição do bico inserido (IN32), sinal que libera a aplicação de adesivo.",
+      "id": "mrt7ieht3zr2x6"
+    },
+    {
+      "date": "2026-07-10",
+      "startTime": "08:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 8,
+      "description": "Comunicação e sincronismo com o robô Fanuc (lógica de rede) Continuação , Controle do eixo elétrico SMC (movimento do bico aplicador) Programação da lógica de comunicação com o drive SMC JXC9H8-BC, comandos de subida/descida do eixo elétrico e liberação de freio, em ambiente offline.",
+      "id": "mrj58xbdk8r0i1"
+    },
+    {
+      "date": "2026-07-09",
+      "startTime": "08:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 8,
+      "description": "Comunicação e sincronismo com o robô Fanuc (lógica de rede) Estruturação das tags produzidas/consumidas via Ethernet/IP e da lógica de sequenciamento (handshake) entre CLP e robô, preparada para validação assim que o robô físico estiver disponível.",
+      "id": "mrj57sugoah3bw"
+    },
+    {
+      "date": "2026-07-08",
+      "startTime": "08:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 8,
+      "description": "Lógica das esteiras de entrada (direita/esquerda) e indexadores Programação do acionamento/parada dos motores das esteiras 1 e 2, controle de freio, sensores de presença, poka-yoke e confirmação de depósito no indexador, em lógica offline.",
+      "id": "mrj572nioznqzn"
+    },
+    {
+      "date": "2026-07-07",
+      "startTime": "08:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 8,
+      "description": "Lógica de segurança e intertravamentos ( Continuação )",
+      "id": "mrj56ii0u2ead7"
+    },
+    {
+      "date": "2026-07-06",
+      "startTime": "08:00",
+      "endTime": "17:00",
+      "lunch": true,
+      "hours": 8,
+      "description": "Configuração e endereçamento dos módulos de E/S ( Continuação ), Criação lógica de segurança e intertravamentos Programação da lógica de emergência, porta de acesso, cortina de luz, disjuntores e falhas de inversores, com base nos sinais previstos do relé de segurança.",
+      "id": "mrj555570b87dz"
+    },
+    {
+      "date": "2026-07-03",
+      "startTime": "07:00",
+      "endTime": "14:00",
+      "lunch": true,
+      "hours": 6,
+      "description": "Configuração e endereçamento dos módulos de E/S Criação e nomeação das tags para os módulos 1769-IQ32, 1769-OB32, 1769-IT6/1769-IF8 e 1769-OF4, conforme tabela de I/O do projeto, sem validação física ainda (será validada na Fase 2).",
+      "id": "mrj5217cujgg1s"
+    },
+    {
+      "date": "2026-06-30",
+      "startTime": "16:00",
+      "endTime": "22:00",
+      "lunch": false,
+      "hours": 6,
+      "description": "Configuração de hardware e rede (projeto offline) - Criação do projeto no Studio 5000, configuração dos módulos do rack (definidos via catálogo, sem hardware físico presente), atribuição dos endereços IP e criação dos módulos genéricos Ethernet/IP para Robô, IHM e Drive SMC.",
+      "id": "mrj4rj0lnb44rt"
+    }
+  ]
+}
