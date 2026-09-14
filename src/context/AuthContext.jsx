@@ -25,11 +25,21 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }
 
+  async function signUp(email, password) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/login` },
+    });
+    if (error) throw error;
+    return data;
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
 
-  const value = { session, user: session?.user ?? null, loading, signIn, signOut };
+  const value = { session, user: session?.user ?? null, loading, signIn, signUp, signOut };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
