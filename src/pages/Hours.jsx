@@ -4,7 +4,7 @@ import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
 import { calcHoras, formatDate, formatMoney } from '../lib/calc.js';
 import { sumHours } from '../lib/aggregate.js';
-import { buildHoursReportHtml } from '../lib/report.js';
+import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
 import StatCard from '../components/StatCard.jsx';
 
 const emptyForm = {
@@ -94,6 +94,19 @@ export default function Hours() {
       periodStart: printStart || null,
       periodEnd: printEnd || null
     });
+    const win = window.open('', '_blank');
+    if (!win) {
+      setError('Não foi possível abrir a janela de impressão. Verifique se o navegador está bloqueando pop-ups.');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  }
+
+  function handlePrintActivityReport() {
+    const html = buildActivityReportHtml({ project, hours });
     const win = window.open('', '_blank');
     if (!win) {
       setError('Não foi possível abrir a janela de impressão. Verifique se o navegador está bloqueando pop-ups.');
@@ -216,7 +229,12 @@ export default function Hours() {
         <p className="muted" style={{ marginBottom: 12 }}>
           Deixe em branco para imprimir todas as jornadas registradas.
         </p>
-        <button onClick={handlePrint}>🖨️ Imprimir / salvar como PDF</button>
+        <div className="btn-row">
+          <button onClick={handlePrint}>🖨️ Imprimir / salvar como PDF</button>
+          {project.tipo_projeto === 'servico' && (
+            <button onClick={handlePrintActivityReport}>📋 Relatório de Atividades (finalização)</button>
+          )}
+        </div>
       </div>
 
       <div className="panel table-scroll">
