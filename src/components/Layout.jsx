@@ -20,6 +20,7 @@ function LayoutInner() {
   const fileInputRef = useRef(null);
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function handleBackupDownload() {
     downloadProjectBackup(project, entries, hours);
@@ -50,32 +51,56 @@ function LayoutInner() {
       <div className="main-area">
         <div className="topbar">
           <div className="topbar-left">
-            <button className="ghost" onClick={() => navigate('/')} title="Voltar para projetos">
-              ← Projetos
+            <button className="ghost icon-btn" onClick={() => navigate('/')} title="Voltar para projetos">
+              ←
             </button>
             <span className="project-name">{project ? project.name : loading ? 'Carregando…' : ''}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div className="topbar-right">
+            <Logo withText={false} height={28} />
             {project && (
-              <>
-                <button className="ghost" onClick={handleBackupDownload} title="Baixar backup deste projeto (.json)">
-                  ⬇️ Backup
+              <div className="menu-wrap">
+                <button className="ghost icon-btn" onClick={() => setMenuOpen((v) => !v)} title="Mais opções">
+                  ⋮
                 </button>
-                <button
-                  className="ghost"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={restoring}
-                  title="Restaurar backup sobre este projeto"
-                >
-                  {restoring ? 'Restaurando…' : '⬆️ Restaurar'}
-                </button>
+                {menuOpen && (
+                  <>
+                    <div className="menu-overlay" onClick={() => setMenuOpen(false)} />
+                    <div className="menu-dropdown">
+                      <button
+                        className="menu-item"
+                        onClick={() => {
+                          handleBackupDownload();
+                          setMenuOpen(false);
+                        }}
+                      >
+                        ⬇️ Backup do projeto
+                      </button>
+                      <button
+                        className="menu-item"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                          setMenuOpen(false);
+                        }}
+                        disabled={restoring}
+                      >
+                        {restoring ? 'Restaurando…' : '⬆️ Restaurar backup'}
+                      </button>
+                      <button
+                        className="menu-item danger"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          signOut();
+                        }}
+                      >
+                        Sair
+                      </button>
+                    </div>
+                  </>
+                )}
                 <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleRestoreFile} />
-              </>
+              </div>
             )}
-            <Logo withText={false} height={30} />
-            <button className="ghost" onClick={signOut}>
-              Sair
-            </button>
           </div>
         </div>
         <div className="tabbar">

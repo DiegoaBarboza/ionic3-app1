@@ -107,6 +107,62 @@ a {
   text-overflow: ellipsis;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  padding: 8px 12px;
+  line-height: 1;
+}
+
+.menu-wrap {
+  position: relative;
+}
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--panel-grad);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  box-shadow: var(--shadow-float-hover);
+}
+
+.menu-item {
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 10px;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background: var(--panel-alt);
+  transform: none;
+}
+
+.menu-item.danger {
+  color: var(--negative);
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -369,6 +425,17 @@ th {
 
 .table-scroll {
   overflow-x: auto;
+}
+
+.hours-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.hours-description {
+  min-width: 260px;
+  max-width: 420px;
+  white-space: normal;
 }
 
 .list-row {

@@ -30,6 +30,12 @@ export function formatDate(dateStr) {
   return `${d}/${m}/${y}`;
 }
 
+export function formatDateShort(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y.slice(-2)}`;
+}
+
 export const CATEGORIES = [
   { value: 'combustivel', label: 'Combustível', icon: '⛽', color: '#e8b84b' },
   { value: 'alimentacao', label: 'Alimentação', icon: '🍔', color: '#2fd4a9' },

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
 import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
-import { calcHoras, formatDate, formatMoney } from '../lib/calc.js';
+import { calcHoras, formatDateShort, formatMoney } from '../lib/calc.js';
 import { sumHours } from '../lib/aggregate.js';
 import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
 import StatCard from '../components/StatCard.jsx';
@@ -240,27 +240,29 @@ export default function Hours() {
       <div className="panel table-scroll">
         {hours.length === 0 && <p className="muted">Nenhuma jornada registrada.</p>}
         {hours.length > 0 && (
-          <table>
+          <table className="hours-table">
             <thead>
               <tr>
                 <th>Data</th>
+                <th>Horas</th>
+                <th>Descrição</th>
                 <th>Início</th>
                 <th>Fim</th>
                 <th>Almoço</th>
-                <th>Horas</th>
-                <th>Descrição</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {hours.map((h) => (
                 <tr key={h.id}>
-                  <td>{formatDate(h.date)}</td>
-                  <td>{h.start_time}</td>
-                  <td>{h.end_time}</td>
-                  <td>{h.lunch ? 'Sim' : 'Não'}</td>
-                  <td className="mono">{h.hours}h</td>
-                  <td>{h.description}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{formatDateShort(h.date)}</td>
+                  <td className="mono" style={{ whiteSpace: 'nowrap' }}>
+                    {h.hours}h
+                  </td>
+                  <td className="hours-description">{h.description}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{h.start_time}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{h.end_time}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{h.lunch ? 'Sim' : 'Não'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button className="ghost" onClick={() => startEdit(h)}>
                       Editar
