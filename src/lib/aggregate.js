@@ -14,6 +14,18 @@ export function sumHours(hours) {
   return hours.reduce((acc, h) => acc + (Number(h.hours) || 0), 0);
 }
 
+/**
+ * Valor projetado a receber pelas horas já lançadas (horas x valor/hora),
+ * menos o que já foi recebido (lançamentos tipo receita). Mesma lógica da
+ * view v_projetos_financeiro no Supabase — calculado aqui no cliente porque
+ * o Dashboard já tem entries/hours carregados, sem precisar de outra consulta.
+ */
+export function receitaAReceber(entries, hours, hourlyRate) {
+  const projetado = sumHours(hours) * (Number(hourlyRate) || 0);
+  const recebido = computeTotals(entries).receita;
+  return projetado - recebido;
+}
+
 export function pieDataByCategory(entries) {
   const totals = {};
   for (const e of entries) {

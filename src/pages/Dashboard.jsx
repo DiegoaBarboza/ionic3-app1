@@ -15,7 +15,7 @@ import {
 import { useProject } from '../context/ProjectContext.jsx';
 import { updateProject } from '../data/projects.js';
 import { formatMoney } from '../lib/calc.js';
-import { computeTotals, monthlyBarData, pieDataByCategory, sumHours } from '../lib/aggregate.js';
+import { computeTotals, monthlyBarData, pieDataByCategory, receitaAReceber, sumHours } from '../lib/aggregate.js';
 import StatCard from '../components/StatCard.jsx';
 
 function InlineField({ value, onSave, placeholder }) {
@@ -43,6 +43,7 @@ export default function Dashboard() {
   }
 
   const totals = computeTotals(entries);
+  const aReceber = receitaAReceber(entries, hours, project.hourly_rate);
   const horasConsumidas = sumHours(hours);
   const horasVendidas = Number(project.total_hours_sold) || 0;
   const pct = horasVendidas > 0 ? Math.min(100, (horasConsumidas / horasVendidas) * 100) : 0;
@@ -81,6 +82,17 @@ export default function Dashboard() {
           tone={totals.lucro >= 0 ? 'positive' : 'negative'}
         />
         <StatCard label="Horas consumidas / vendidas" value={`${horasConsumidas}h / ${horasVendidas}h`} />
+      </div>
+
+      <div className="panel" style={{ marginBottom: 16 }}>
+        <div className="label">Receita a receber</div>
+        <div className={'money' + (aReceber > 0 ? ' positive' : '')} style={{ fontSize: 28, fontWeight: 600, marginTop: 4 }}>
+          {formatMoney(Math.max(0, aReceber))}
+        </div>
+        <p className="muted" style={{ marginTop: 6 }}>
+          Horas já lançadas ({horasConsumidas}h × {formatMoney(project.hourly_rate)}) ainda não recebidas em
+          lançamentos de receita. Some um lançamento de receita quando o cliente pagar para abater esse valor.
+        </p>
       </div>
 
       <div className="panel" style={{ marginBottom: 16 }}>
