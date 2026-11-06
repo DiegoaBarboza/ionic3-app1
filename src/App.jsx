@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Entries from './pages/Entries.jsx';
 import Hours from './pages/Hours.jsx';
 import Reports from './pages/Reports.jsx';
+import ServiceProject from './pages/ServiceProject.jsx';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/project/:projectId" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="projeto" element={<ServiceProject />} />
           <Route path="lancamentos" element={<Entries />} />
           <Route path="horas" element={<Hours />} />
           <Route path="relatorios" element={<Reports />} />

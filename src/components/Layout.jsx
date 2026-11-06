@@ -6,7 +6,7 @@ import { ProjectProvider, useProject } from '../context/ProjectContext.jsx';
 import { downloadProjectBackup, readBackupFile } from '../lib/backup.js';
 import { overwriteProjectFromBackup } from '../data/projects.js';
 
-const TABS = [
+const BASE_TABS = [
   { to: 'dashboard', label: 'Dashboard' },
   { to: 'lancamentos', label: 'Lançamentos' },
   { to: 'horas', label: 'Horas' },
@@ -21,6 +21,11 @@ function LayoutInner() {
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const tabs =
+    project?.tipo_projeto === 'servico'
+      ? [BASE_TABS[0], { to: 'projeto', label: 'Projeto' }, ...BASE_TABS.slice(1)]
+      : BASE_TABS;
 
   function handleBackupDownload() {
     downloadProjectBackup(project, entries, hours);
@@ -104,7 +109,7 @@ function LayoutInner() {
           </div>
         </div>
         <div className="tabbar">
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <NavLink key={tab.to} to={tab.to} className={({ isActive }) => 'tab-link' + (isActive ? ' active' : '')}>
               {tab.label}
             </NavLink>

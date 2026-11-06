@@ -12,7 +12,9 @@ const emptyForm = {
   location: '',
   client_contact: '',
   hourly_rate: '',
-  total_hours_sold: ''
+  total_hours_sold: '',
+  tipo_projeto: 'servico',
+  tipo_controle_horas: 'estimativa'
 };
 
 export default function Home() {
@@ -56,7 +58,9 @@ export default function Home() {
         location: form.location.trim(),
         client_contact: form.client_contact.trim(),
         hourly_rate: form.hourly_rate === '' ? 0 : Number(form.hourly_rate),
-        total_hours_sold: form.total_hours_sold === '' ? 0 : Number(form.total_hours_sold)
+        total_hours_sold: form.total_hours_sold === '' ? 0 : Number(form.total_hours_sold),
+        tipo_projeto: form.tipo_projeto,
+        tipo_controle_horas: form.tipo_controle_horas
       });
       setForm(emptyForm);
       setShowForm(false);
@@ -149,6 +153,28 @@ export default function Home() {
                 onChange={(e) => setForm({ ...form, total_hours_sold: e.target.value })}
               />
             </div>
+            <div className="field">
+              <label>Tipo de projeto</label>
+              <select
+                value={form.tipo_projeto}
+                onChange={(e) => setForm({ ...form, tipo_projeto: e.target.value })}
+              >
+                <option value="servico">Serviço (programação de robô/CLP em campo)</option>
+                <option value="maquina">Construção de máquinas / células robotizadas</option>
+              </select>
+            </div>
+            {form.tipo_projeto === 'servico' && (
+              <div className="field">
+                <label>Controle de horas</label>
+                <select
+                  value={form.tipo_controle_horas}
+                  onChange={(e) => setForm({ ...form, tipo_controle_horas: e.target.value })}
+                >
+                  <option value="estimativa">Estimativa (orçamento, sem trava)</option>
+                  <option value="contratado">Contratado (teto com alerta de estouro)</option>
+                </select>
+              </div>
+            )}
           </div>
           <button type="submit" className="primary" disabled={saving}>
             {saving ? 'Criando…' : 'Criar projeto'}
@@ -171,6 +197,9 @@ export default function Home() {
             <div style={{ fontWeight: 600, marginBottom: 6 }}>{p.name}</div>
             <div className="muted">
               {p.client_name || 'Sem cliente'} {p.location ? `· ${p.location}` : ''}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <span className="badge">{p.tipo_projeto === 'maquina' ? 'Construção de máquina' : 'Serviço'}</span>
             </div>
             <div className="mono muted" style={{ marginTop: 8 }}>
               {formatMoney(p.hourly_rate)}/h · {p.total_hours_sold || 0}h vendidas
