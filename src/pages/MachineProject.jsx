@@ -88,7 +88,7 @@ function TeamPicker({ stage, team, pessoas, onAdd, onRemove }) {
   );
 }
 
-function Gantt({ stages }) {
+export function Gantt({ stages }) {
   const withDates = stages.filter((s) => s.planned_start && s.planned_end);
   if (withDates.length === 0) {
     return <p className="muted">Preencha as datas previstas das etapas para ver o cronograma visual.</p>;
@@ -99,72 +99,123 @@ function Gantt({ stages }) {
   const max = Math.max(...allDates.map(toTime));
   const span = Math.max(max - min, 86400000);
   const todayPct = Math.min(100, Math.max(0, ((Date.now() - min) / span) * 100));
+  const ticks = buildGanttTicks(min, max);
+
+  const LABEL_W = 190;
+  const HEADER_H = 26;
+  const ROW_H = 34;
+  const chartHeight = HEADER_H + ROW_H * stages.length;
 
   return (
-    <div style={{ minWidth: 640 }}>
-      <div style={{ position: 'relative', height: 1 }}>
-        <div
-          style={{
-            position: 'absolute',
-            left: `${todayPct}%`,
-            top: -4,
-            bottom: 0,
-            width: 2,
-            background: 'var(--negative)',
-            opacity: 0.5
-          }}
-        />
-      </div>
-      {stages.map((s) => {
-        const hasPlanned = s.planned_start && s.planned_end;
-        const hasActual = s.actual_start;
-        const pStart = hasPlanned ? ((toTime(s.planned_start) - min) / span) * 100 : 0;
-        const pWidth = hasPlanned ? Math.max(1, ((toTime(s.planned_end) - toTime(s.planned_start)) / span) * 100) : 0;
-        const aEnd = s.actual_end || new Date().toISOString().slice(0, 10);
-        const aStart = hasActual ? ((toTime(s.actual_start) - min) / span) * 100 : 0;
-        const aWidth = hasActual ? Math.max(1, ((toTime(aEnd) - toTime(s.actual_start)) / span) * 100) : 0;
-        return (
-          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
-            <div style={{ width: 190, flexShrink: 0, fontSize: 13 }}>{s.stage_label}</div>
-            <div style={{ flex: 1, position: 'relative', height: 20 }}>
-              {hasPlanned && (
-                <div
-                  title={`Previsto: ${formatDate(s.planned_start)} a ${formatDate(s.planned_end)}`}
-                  style={{
-                    position: 'absolute',
-                    left: `${pStart}%`,
-                    width: `${pWidth}%`,
-                    top: 0,
-                    height: 8,
-                    borderRadius: 4,
-                    background: s.color
-                  }}
-                />
-              )}
-              {hasActual && (
-                <div
-                  title={`Real: ${formatDate(s.actual_start)}${s.actual_end ? ' a ' + formatDate(s.actual_end) : ' (em andamento)'}`}
-                  style={{
-                    position: 'absolute',
-                    left: `${aStart}%`,
-                    width: `${aWidth}%`,
-                    top: 11,
-                    height: 8,
-                    borderRadius: 4,
-                    background: s.color,
-                    opacity: 0.45
-                  }}
-                />
-              )}
+    <div style={{ minWidth: 680 }}>
+      <div style={{ display: 'flex' }}>
+        <div style={{ width: LABEL_W, flexShrink: 0 }}>
+          <div style={{ height: HEADER_H }} />
+          {stages.map((s) => (
+            <div key={s.id} style={{ height: ROW_H, display: 'flex', alignItems: 'center', fontSize: 13 }}>
+              {s.stage_label}
             </div>
-          </div>
-        );
-      })}
+          ))}
+        </div>
+
+        <div style={{ flex: 1, position: 'relative', height: chartHeight }}>
+          {ticks.map((t, i) => {
+            const pct = ((t.getTime() - min) / span) * 100;
+            return (
+              <div key={i} style={{ position: 'absolute', left: `${pct}%`, top: 0, bottom: 0 }}>
+                <div style={{ position: 'absolute', top: 0, bottom: 0, width: 1, background: 'var(--border)' }} />
+                <div
+                  className="muted"
+                  style={{ position: 'absolute', top: 0, left: 4, fontSize: 11, whiteSpace: 'nowrap' }}
+                >
+                  {ganttTickLabel(t)}
+                </div>
+              </div>
+            );
+          })}
+          <div
+            style={{ position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0, width: 2, background: 'var(--negative)', opacity: 0.6 }}
+          />
+
+          {stages.map((s, i) => {
+            const hasPlanned = s.planned_start && s.planned_end;
+            const hasActual = s.actual_start;
+            const pStart = hasPlanned ? ((toTime(s.planned_start) - min) / span) * 100 : 0;
+            const pWidth = hasPlanned ? Math.max(1, ((toTime(s.planned_end) - toTime(s.planned_start)) / span) * 100) : 0;
+            const aEnd = s.actual_end || new Date().toISOString().slice(0, 10);
+            const aStart = hasActual ? ((toTime(s.actual_start) - min) / span) * 100 : 0;
+            const aWidth = hasActual ? Math.max(1, ((toTime(aEnd) - toTime(s.actual_start)) / span) * 100) : 0;
+            const rowTop = HEADER_H + i * ROW_H;
+            return (
+              <div key={s.id}>
+                {hasPlanned && (
+                  <div
+                    title={`Previsto: ${formatDate(s.planned_start)} a ${formatDate(s.planned_end)}`}
+                    style={{
+                      position: 'absolute',
+                      left: `${pStart}%`,
+                      width: `${pWidth}%`,
+                      top: rowTop + 4,
+                      height: 10,
+                      borderRadius: 4,
+                      background: s.color
+                    }}
+                  />
+                )}
+                {hasActual && (
+                  <div
+                    title={`Real: ${formatDate(s.actual_start)}${s.actual_end ? ' a ' + formatDate(s.actual_end) : ' (em andamento)'}`}
+                    style={{
+                      position: 'absolute',
+                      left: `${aStart}%`,
+                      width: `${aWidth}%`,
+                      top: rowTop + 18,
+                      height: 10,
+                      borderRadius: 4,
+                      background: s.color,
+                      opacity: 0.45
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <p className="muted" style={{ marginTop: 10 }}>
         Barra cheia = previsto · barra clara = realizado · linha vermelha = hoje.
       </p>
     </div>
   );
+}
+
+const GANTT_MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+function ganttTickLabel(d) {
+  return `${String(d.getDate()).padStart(2, '0')}/${GANTT_MESES[d.getMonth()]}`;
+}
+
+/** Marcas verticais do cronograma: semanais se o período for curto, mensais se for longo. */
+function buildGanttTicks(min, max) {
+  const spanDays = (max - min) / 86400000;
+  const ticks = [];
+  if (spanDays <= 45) {
+    const t = new Date(min);
+    t.setHours(0, 0, 0, 0);
+    while (t.getTime() <= max) {
+      ticks.push(new Date(t));
+      t.setDate(t.getDate() + 7);
+    }
+  } else {
+    const t = new Date(min);
+    t.setDate(1);
+    t.setHours(0, 0, 0, 0);
+    while (t.getTime() <= max) {
+      ticks.push(new Date(t));
+      t.setMonth(t.getMonth() + 1);
+    }
+  }
+  return ticks;
 }
 
 export default function MachineProject() {

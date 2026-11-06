@@ -36,6 +36,7 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
   const totalKm = hours.reduce((acc, h) => acc + (Number(h.km_ida) || 0) + (Number(h.km_volta) || 0), 0);
   const totalPedagio = hours.reduce((acc, h) => acc + (Number(h.pedagio) || 0), 0);
   const totalReembolso = hours.reduce((acc, h) => acc + calcReembolso(h), 0);
+  const valorKm = totalReembolso - totalPedagio;
   const periodo =
     periodStart && periodEnd ? `${formatDate(periodStart)} a ${formatDate(periodEnd)}` : 'Todo o período';
 
@@ -75,9 +76,13 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
     <div class="stat-pill">Total de horas: <strong>${totalHoras}h</strong></div>
     ${
       temDeslocamento
-        ? `<div class="stat-pill">Total KM rodado: <strong>${totalKm}km</strong></div>
-    <div class="stat-pill">Total pedágios: <strong>${formatMoney(totalPedagio)}</strong></div>
-    <div class="stat-pill">Total a reembolsar (deslocamento): <strong>${formatMoney(totalReembolso)}</strong></div>`
+        ? `<div class="section-title" style="margin-top: 18px;">Composição do reembolso de deslocamento</div>
+    <div class="info-card">
+      <div><span class="info-label">KM rodado no período</span>${totalKm}km</div>
+      <div><span class="info-label">Valor gerado pelos KMs</span>${formatMoney(valorKm)}</div>
+      <div><span class="info-label">Pedágios</span>${formatMoney(totalPedagio)}</div>
+      <div><span class="info-label">Total a reembolsar</span><strong>${formatMoney(totalReembolso)}</strong></div>
+    </div>`
         : ''
     }
 
