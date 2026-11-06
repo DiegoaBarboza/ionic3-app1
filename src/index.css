@@ -1,22 +1,26 @@
 :root {
-  --bg: #eef2f8;
-  --panel: rgba(255, 255, 255, 0.82);
-  --panel-alt: #eef1f6;
-  --panel-grad: linear-gradient(165deg, rgba(255, 255, 255, 0.92) 0%, rgba(246, 249, 253, 0.86) 100%);
-  --border: #dde3ec;
-  --border-soft: rgba(16, 24, 40, 0.07);
-  --text: #121826;
-  --text-dim: #6b7688;
-  --accent: #0ea5c4;
-  --accent-dim: #0b7f99;
-  --positive: #14b891;
-  --negative: #e23f3f;
-  --warning: #c8891a;
+  /* Paleta inspirada no tema claro do Zyro OS (mesma família de cores:
+     fundo gelo/azulado, cards em degradê branco -> gelo, sombra com tom
+     azul-marinho em vez de preto, acento ciano #0a7ea4). */
+  --bg: #c3d0da;
+  --panel: #f3f7fa;
+  --panel-alt: #e5edf3;
+  --panel-grad: linear-gradient(165deg, #fffffff0 0%, #e5edf3e6 100%);
+  --border: #d7e0e8;
+  --border-soft: rgba(255, 255, 255, 0.65);
+  --text: #0b141a;
+  --text-dim: #5b6b7a;
+  --accent: #0a7ea4;
+  --accent-dim: #086d90;
+  --positive: #15803d;
+  --negative: #dc2626;
+  --warning: #a16207;
+  --zentro-blue: #0052d6;
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow-float: 0 1px 2px rgba(16, 24, 40, 0.04), 0 14px 32px -14px rgba(16, 24, 40, 0.16);
-  --shadow-float-hover: 0 1px 2px rgba(16, 24, 40, 0.05), 0 22px 44px -16px rgba(16, 24, 40, 0.22);
-  --shadow-glow: 0 10px 26px -8px rgba(14, 165, 196, 0.35);
+  --shadow-float: 0 2px 3px rgba(20, 55, 80, 0.14), 0 14px 26px -10px rgba(20, 55, 80, 0.22);
+  --shadow-float-hover: 0 4px 8px rgba(20, 55, 80, 0.16), 0 24px 40px -14px rgba(20, 55, 80, 0.28);
+  --shadow-glow: 0 10px 26px -8px rgba(10, 126, 164, 0.4);
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
@@ -33,9 +37,10 @@ body,
 
 body {
   margin: 0;
-  background: var(--bg);
-  background-image: radial-gradient(900px 500px at 12% -10%, rgba(14, 165, 196, 0.14), transparent 60%),
-    radial-gradient(700px 480px at 100% 0%, rgba(20, 184, 145, 0.1), transparent 55%);
+  background: linear-gradient(165deg, #eef3f7 0%, #c3d0da 100%);
+  background-image: linear-gradient(165deg, #eef3f7 0%, #c3d0da 100%),
+    radial-gradient(900px 520px at 10% -10%, rgba(0, 82, 214, 0.16), transparent 62%),
+    radial-gradient(760px 520px at 105% 5%, rgba(10, 126, 164, 0.14), transparent 58%);
   background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-sans);
@@ -87,7 +92,7 @@ a {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-soft);
@@ -196,7 +201,7 @@ a {
   gap: 4px;
   padding: 8px 16px 0;
   overflow-x: auto;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-soft);
@@ -265,15 +270,15 @@ button.panel {
 button.panel:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-float-hover);
-  border-color: rgba(14, 165, 196, 0.35);
+  border-color: rgba(10, 126, 164, 0.4);
 }
 
 .stat-card {
-  background: linear-gradient(160deg, #ffffff 0%, #f3f7fb 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #e5edf3 100%);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
   padding: 14px;
-  box-shadow: 0 1px 1px rgba(16, 24, 40, 0.03), 0 8px 18px -10px rgba(16, 24, 40, 0.14);
+  box-shadow: 0 1px 1px rgba(20, 55, 80, 0.06), 0 8px 18px -10px rgba(20, 55, 80, 0.2);
 }
 
 .stat-card .label {
@@ -307,13 +312,13 @@ button.panel:hover {
 input:not([type='checkbox']):not([type='radio']):not([type='file']),
 select,
 textarea {
-  background: rgba(16, 24, 40, 0.035);
+  background: rgba(20, 55, 80, 0.045);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 9px 10px;
   outline: none;
-  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: inset 0 1px 2px rgba(20, 55, 80, 0.05);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -321,7 +326,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent);
-  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.04), 0 0 0 3px rgba(14, 165, 196, 0.15);
+  box-shadow: inset 0 1px 2px rgba(20, 55, 80, 0.05), 0 0 0 3px rgba(10, 126, 164, 0.18);
 }
 
 .inline-edit {
@@ -378,7 +383,7 @@ button.primary {
 
 button.primary:hover {
   background: var(--accent-dim);
-  box-shadow: 0 14px 32px -10px rgba(14, 165, 196, 0.45);
+  box-shadow: 0 14px 32px -10px rgba(10, 126, 164, 0.5);
 }
 
 button.danger {
@@ -466,17 +471,17 @@ th {
 
 .progress {
   height: 8px;
-  background: rgba(16, 24, 40, 0.08);
+  background: rgba(20, 55, 80, 0.1);
   border-radius: 999px;
   overflow: hidden;
-  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.06);
+  box-shadow: inset 0 1px 2px rgba(20, 55, 80, 0.08);
 }
 
 .progress > span {
   display: block;
   height: 100%;
   background: var(--accent);
-  box-shadow: 0 0 10px rgba(14, 165, 196, 0.5);
+  box-shadow: 0 0 10px rgba(10, 126, 164, 0.55);
   transition: width 0.3s ease;
 }
 
