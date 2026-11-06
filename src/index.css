@@ -485,6 +485,18 @@ th {
   border: 1px solid var(--border-soft);
 }
 
+.badge.positive {
+  background: rgba(21, 128, 61, 0.12);
+  border-color: rgba(21, 128, 61, 0.3);
+  color: var(--positive);
+}
+
+.badge.negative {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.3);
+  color: var(--negative);
+}
+
 /* ---------- progress bar ---------- */
 
 .progress {

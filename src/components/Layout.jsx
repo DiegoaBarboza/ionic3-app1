@@ -25,7 +25,9 @@ function LayoutInner() {
   const tabs =
     project?.tipo_projeto === 'servico'
       ? [BASE_TABS[0], { to: 'projeto', label: 'Projeto' }, ...BASE_TABS.slice(1)]
-      : BASE_TABS;
+      : project?.tipo_projeto === 'maquina'
+        ? [BASE_TABS[0], { to: 'construcao', label: 'Construção' }, ...BASE_TABS.slice(1)]
+        : BASE_TABS;
 
   function handleBackupDownload() {
     downloadProjectBackup(project, entries, hours);
