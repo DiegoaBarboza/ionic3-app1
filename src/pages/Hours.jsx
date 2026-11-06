@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
 import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
-import { calcHoras, formatDateShort, formatMoney } from '../lib/calc.js';
+import { calcHoras, calcReembolso, formatDateShort, formatMoney } from '../lib/calc.js';
 import { sumHours } from '../lib/aggregate.js';
 import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
 import StatCard from '../components/StatCard.jsx';
@@ -12,7 +12,11 @@ const emptyForm = {
   start_time: '08:00',
   end_time: '17:00',
   lunch: true,
-  description: ''
+  description: '',
+  km_ida: '',
+  km_volta: '',
+  valor_km: '',
+  pedagio: ''
 };
 
 export default function Hours() {
@@ -29,6 +33,7 @@ export default function Hours() {
   const [printEnd, setPrintEnd] = useState('');
 
   const preview = calcHoras(form.start_time, form.end_time, form.lunch);
+  const reembolsoPreview = calcReembolso(form);
   const consumidas = sumHours(hours);
   const vendidas = Number(project.total_hours_sold) || 0;
   const restantes = Math.max(0, vendidas - consumidas);
@@ -52,7 +57,11 @@ export default function Hours() {
         end_time: form.end_time,
         lunch: form.lunch,
         hours: calcHoras(form.start_time, form.end_time, form.lunch),
-        description: form.description || null
+        description: form.description || null,
+        km_ida: Number(form.km_ida) || 0,
+        km_volta: Number(form.km_volta) || 0,
+        valor_km: Number(form.valor_km) || 0,
+        pedagio: Number(form.pedagio) || 0
       };
       if (editingId) {
         await updateHours(editingId, payload);
@@ -76,7 +85,11 @@ export default function Hours() {
       start_time: h.start_time,
       end_time: h.end_time,
       lunch: h.lunch,
-      description: h.description || ''
+      description: h.description || '',
+      km_ida: h.km_ida || '',
+      km_volta: h.km_volta || '',
+      valor_km: h.valor_km || '',
+      pedagio: h.pedagio || ''
     });
   }
 
@@ -193,8 +206,47 @@ export default function Hours() {
           <label>Descrição da atividade</label>
           <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </div>
+        <div className="form-row">
+          <div className="field">
+            <label>KM de ida</label>
+            <input
+              type="number"
+              step="0.1"
+              value={form.km_ida}
+              onChange={(e) => setForm({ ...form, km_ida: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>KM de volta</label>
+            <input
+              type="number"
+              step="0.1"
+              value={form.km_volta}
+              onChange={(e) => setForm({ ...form, km_volta: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Valor por KM (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={form.valor_km}
+              onChange={(e) => setForm({ ...form, valor_km: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Pedágio do dia (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={form.pedagio}
+              onChange={(e) => setForm({ ...form, pedagio: e.target.value })}
+            />
+          </div>
+        </div>
         <p className="muted">
-          Horas calculadas: <span className="mono">{preview}h</span>
+          Horas calculadas: <span className="mono">{preview}h</span> · Reembolso de deslocamento:{' '}
+          <span className="mono">{formatMoney(reembolsoPreview)}</span>
         </p>
         {error && <p className="error-text">{error}</p>}
         <div className="btn-row">
@@ -249,6 +301,7 @@ export default function Hours() {
                 <th>Início</th>
                 <th>Fim</th>
                 <th>Almoço</th>
+                <th>Reembolso</th>
                 <th></th>
               </tr>
             </thead>
@@ -263,6 +316,9 @@ export default function Hours() {
                   <td style={{ whiteSpace: 'nowrap' }}>{h.start_time}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{h.end_time}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{h.lunch ? 'Sim' : 'Não'}</td>
+                  <td className="mono" style={{ whiteSpace: 'nowrap' }}>
+                    {calcReembolso(h) > 0 ? formatMoney(calcReembolso(h)) : '—'}
+                  </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button className="ghost" onClick={() => startEdit(h)}>
                       Editar

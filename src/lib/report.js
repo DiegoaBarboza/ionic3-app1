@@ -1,4 +1,4 @@
-import { formatDate } from './calc.js';
+import { calcReembolso, formatDate, formatMoney } from './calc.js';
 import { LOGO_DATA_URI } from './logo.js';
 
 function escapeHtml(str) {
@@ -13,6 +13,8 @@ function escapeHtml(str) {
  * dispositivo).
  */
 export function buildHoursReportHtml({ project, hours, periodStart, periodEnd }) {
+  const temDeslocamento = hours.some((h) => calcReembolso(h) > 0);
+
   const rows = hours
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -25,11 +27,15 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
         <td>${h.lunch ? 'Sim' : 'Não'}</td>
         <td>${h.hours}h</td>
         <td>${escapeHtml(h.description)}</td>
+        ${temDeslocamento ? `<td>${formatMoney(calcReembolso(h))}</td>` : ''}
       </tr>`
     )
     .join('');
 
   const totalHoras = hours.reduce((acc, h) => acc + (Number(h.hours) || 0), 0);
+  const totalKm = hours.reduce((acc, h) => acc + (Number(h.km_ida) || 0) + (Number(h.km_volta) || 0), 0);
+  const totalPedagio = hours.reduce((acc, h) => acc + (Number(h.pedagio) || 0), 0);
+  const totalReembolso = hours.reduce((acc, h) => acc + calcReembolso(h), 0);
   const periodo =
     periodStart && periodEnd ? `${formatDate(periodStart)} a ${formatDate(periodEnd)}` : 'Todo o período';
 
@@ -61,12 +67,19 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
 
     <table>
       <thead>
-        <tr><th>Data</th><th>Início</th><th>Fim</th><th>Almoço</th><th>Horas</th><th>Descrição</th></tr>
+        <tr><th>Data</th><th>Início</th><th>Fim</th><th>Almoço</th><th>Horas</th><th>Descrição</th>${temDeslocamento ? '<th>Reembolso</th>' : ''}</tr>
       </thead>
-      <tbody>${rows || '<tr><td colspan="6">Sem jornadas neste período.</td></tr>'}</tbody>
+      <tbody>${rows || `<tr><td colspan="${temDeslocamento ? 7 : 6}">Sem jornadas neste período.</td></tr>`}</tbody>
     </table>
 
     <div class="stat-pill">Total de horas: <strong>${totalHoras}h</strong></div>
+    ${
+      temDeslocamento
+        ? `<div class="stat-pill">Total KM rodado: <strong>${totalKm}km</strong></div>
+    <div class="stat-pill">Total pedágios: <strong>${formatMoney(totalPedagio)}</strong></div>
+    <div class="stat-pill">Total a reembolsar (deslocamento): <strong>${formatMoney(totalReembolso)}</strong></div>`
+        : ''
+    }
 
     <div class="signatures">
       <div class="signature-line">Responsável técnico</div>

@@ -30,6 +30,16 @@ export function formatDate(dateStr) {
   return `${d}/${m}/${y}`;
 }
 
+/**
+ * Reembolso de deslocamento de uma jornada: (km de ida + km de volta) x valor
+ * por km, mais o pedágio do dia. Usado no relatório de horas para solicitar
+ * o reembolso ao cliente.
+ */
+export function calcReembolso(h) {
+  const km = (Number(h.km_ida) || 0) + (Number(h.km_volta) || 0);
+  return km * (Number(h.valor_km) || 0) + (Number(h.pedagio) || 0);
+}
+
 export function formatDateShort(dateStr) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
