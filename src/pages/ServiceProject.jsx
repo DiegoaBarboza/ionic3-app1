@@ -145,10 +145,17 @@ export default function ServiceProject() {
           <input type="date" {...field('data_finalizacao')} />
         </Field>
 
-        <div className="btn-row" style={{ margin: '4px 0 14px' }}>
+        <div className="btn-row" style={{ margin: '4px 0 14px', alignItems: 'center' }}>
           <button type="button" onClick={handleAnalyzeNow} disabled={analyzing}>
-            {analyzing ? 'Analisando…' : '🤖 Analisar agora com IA'}
+            {analyzing ? (
+              <>
+                <span className="spinner" /> Analisando…
+              </>
+            ) : (
+              '🤖 Analisar agora com IA'
+            )}
           </button>
+          {analyzing && <span className="muted">Pode levar até 15-20s (resposta do Gemini).</span>}
         </div>
         {analyzeMsg && <p className="muted" style={{ marginBottom: 14 }}>{analyzeMsg}</p>}
 
