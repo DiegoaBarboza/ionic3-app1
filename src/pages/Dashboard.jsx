@@ -130,7 +130,7 @@ export default function Dashboard() {
                   </Pie>
                   <Tooltip
                     formatter={(value) => formatMoney(value)}
-                    contentStyle={{ background: '#181e27', border: '1px solid #262f3d', borderRadius: 8 }}
+                    contentStyle={{ background: '#ffffff', border: '1px solid #dde3ec', borderRadius: 8 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
@@ -149,16 +149,16 @@ export default function Dashboard() {
             <div style={{ width: '100%', height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262f3d" />
-                  <XAxis dataKey="month" tick={{ fill: '#8b96a5', fontSize: 12 }} />
-                  <YAxis tick={{ fill: '#8b96a5', fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dde3ec" />
+                  <XAxis dataKey="month" tick={{ fill: '#6b7688', fontSize: 12 }} />
+                  <YAxis tick={{ fill: '#6b7688', fontSize: 12 }} />
                   <Tooltip
                     formatter={(value) => formatMoney(value)}
-                    contentStyle={{ background: '#181e27', border: '1px solid #262f3d', borderRadius: 8 }}
+                    contentStyle={{ background: '#ffffff', border: '1px solid #dde3ec', borderRadius: 8 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="receita" name="Receita" fill="#2fd4a9" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                  <Bar dataKey="gasto" name="Gasto" fill="#ef5a5a" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                  <Bar dataKey="receita" name="Receita" fill="#14b891" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                  <Bar dataKey="gasto" name="Gasto" fill="#e23f3f" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -9,11 +9,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['logo-zenite.png'],
       manifest: {
-        name: 'Controle Financeiro Zênite',
-        short_name: 'Zênite Financeiro',
-        description: 'Gestão financeira e de horas de projetos de automação/robótica industrial',
-        theme_color: '#10141A',
-        background_color: '#10141A',
+        name: 'Zentro Projects',
+        short_name: 'Zentro Projects',
+        description: 'Gestão de projetos, horas e financeiro, do papel ao chão de fábrica',
+        theme_color: '#f4f7fb',
+        background_color: '#f4f7fb',
         display: 'standalone',
         start_url: '/',
         icons: [
