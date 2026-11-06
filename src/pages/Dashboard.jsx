@@ -42,8 +42,12 @@ export default function Dashboard() {
     setProject(updated);
   }
 
+  const isMaquina = project.tipo_projeto === 'maquina';
   const totals = computeTotals(entries);
-  const aReceber = receitaAReceber(entries, hours, project.hourly_rate);
+  const aReceber = isMaquina
+    ? (Number(project.valor_fixo_projeto) || 0) - totals.receita
+    : receitaAReceber(entries, hours, project.hourly_rate);
+  const lucro = isMaquina ? (Number(project.valor_fixo_projeto) || 0) - totals.gasto : totals.lucro;
   const horasConsumidas = sumHours(hours);
   const horasVendidas = Number(project.total_hours_sold) || 0;
   const pct = horasVendidas > 0 ? Math.min(100, (horasConsumidas / horasVendidas) * 100) : 0;
@@ -74,14 +78,22 @@ export default function Dashboard() {
       </div>
 
       <div className="grid cols-4" style={{ marginBottom: 16 }}>
-        <StatCard label="Receita total" value={formatMoney(totals.receita)} tone="positive" />
+        {isMaquina ? (
+          <StatCard label="Valor fixo do projeto" value={formatMoney(project.valor_fixo_projeto)} />
+        ) : (
+          <StatCard label="Receita total" value={formatMoney(totals.receita)} tone="positive" />
+        )}
         <StatCard label="Gastos totais" value={formatMoney(totals.gasto)} tone="negative" />
         <StatCard
-          label="Lucro do projeto"
-          value={formatMoney(totals.lucro)}
-          tone={totals.lucro >= 0 ? 'positive' : 'negative'}
+          label={isMaquina ? 'Lucro projetado' : 'Lucro do projeto'}
+          value={formatMoney(lucro)}
+          tone={lucro >= 0 ? 'positive' : 'negative'}
         />
-        <StatCard label="Horas consumidas / vendidas" value={`${horasConsumidas}h / ${horasVendidas}h`} />
+        {isMaquina ? (
+          <StatCard label="Recebido até agora" value={formatMoney(totals.receita)} tone="positive" />
+        ) : (
+          <StatCard label="Horas consumidas / vendidas" value={`${horasConsumidas}h / ${horasVendidas}h`} />
+        )}
       </div>
 
       <div className="panel" style={{ marginBottom: 16 }}>
@@ -90,19 +102,27 @@ export default function Dashboard() {
           {formatMoney(Math.max(0, aReceber))}
         </div>
         <p className="muted" style={{ marginTop: 6 }}>
-          Horas já lançadas ({horasConsumidas}h × {formatMoney(project.hourly_rate)}) ainda não recebidas em
-          lançamentos de receita. Some um lançamento de receita quando o cliente pagar para abater esse valor.
+          {isMaquina
+            ? 'Valor fixo do projeto ainda não recebido em lançamentos de receita. Some um lançamento de receita quando o cliente pagar para abater esse valor.'
+            : `Horas já lançadas (${horasConsumidas}h × ${formatMoney(project.hourly_rate)}) ainda não recebidas em lançamentos de receita. Some um lançamento de receita quando o cliente pagar para abater esse valor.`}
         </p>
       </div>
 
-      <div className="panel" style={{ marginBottom: 16 }}>
-        <div className="label" style={{ marginBottom: 8 }}>
-          Consumo de horas do contrato ({pct.toFixed(0)}%)
+      {!isMaquina && (
+        <div className="panel" style={{ marginBottom: 16 }}>
+          <div className="label" style={{ marginBottom: 8 }}>
+            Consumo de horas do contrato ({pct.toFixed(0)}%)
+          </div>
+          <div className={'progress' + (pct >= 90 ? ' danger' : '')}>
+            <span style={{ width: `${pct}%` }} />
+          </div>
         </div>
-        <div className={'progress' + (pct >= 90 ? ' danger' : '')}>
-          <span style={{ width: `${pct}%` }} />
-        </div>
-      </div>
+      )}
+      {isMaquina && (
+        <p className="muted" style={{ marginBottom: 16 }}>
+          Etapas, equipe, horas por área e cronograma ficam na aba <strong>Construção</strong>.
+        </p>
+      )}
 
       <div className="grid cols-2">
         <div className="panel">

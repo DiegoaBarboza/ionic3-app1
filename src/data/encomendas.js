@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient.js';
 export async function listEncomendas(projectId) {
   const { data, error } = await supabase
     .from('encomendas')
-    .select('*')
+    .select('*, fornecedores(*)')
     .eq('project_id', projectId)
     .order('prazo_combinado', { ascending: true, nullsFirst: false });
   if (error) throw error;
@@ -14,14 +14,19 @@ export async function createEncomenda(projectId, fields) {
   const { data, error } = await supabase
     .from('encomendas')
     .insert({ ...fields, project_id: projectId })
-    .select()
+    .select('*, fornecedores(*)')
     .single();
   if (error) throw error;
   return data;
 }
 
 export async function updateEncomenda(id, fields) {
-  const { data, error } = await supabase.from('encomendas').update(fields).eq('id', id).select().single();
+  const { data, error } = await supabase
+    .from('encomendas')
+    .update(fields)
+    .eq('id', id)
+    .select('*, fornecedores(*)')
+    .single();
   if (error) throw error;
   return data;
 }

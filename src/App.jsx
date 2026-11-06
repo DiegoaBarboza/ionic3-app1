@@ -9,6 +9,7 @@ import Hours from './pages/Hours.jsx';
 import Reports from './pages/Reports.jsx';
 import ServiceProject from './pages/ServiceProject.jsx';
 import MachineProject from './pages/MachineProject.jsx';
+import Cadastros from './pages/Cadastros.jsx';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Home />} />
+        <Route path="/cadastros" element={<Cadastros />} />
 
         <Route path="/project/:projectId" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />

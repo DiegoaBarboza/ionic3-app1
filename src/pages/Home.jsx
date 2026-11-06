@@ -13,6 +13,7 @@ const emptyForm = {
   client_contact: '',
   hourly_rate: '',
   total_hours_sold: '',
+  valor_fixo_projeto: '',
   tipo_projeto: 'servico',
   tipo_controle_horas: 'estimativa'
 };
@@ -59,6 +60,7 @@ export default function Home() {
         client_contact: form.client_contact.trim(),
         hourly_rate: form.hourly_rate === '' ? 0 : Number(form.hourly_rate),
         total_hours_sold: form.total_hours_sold === '' ? 0 : Number(form.total_hours_sold),
+        valor_fixo_projeto: form.valor_fixo_projeto === '' ? null : Number(form.valor_fixo_projeto),
         tipo_projeto: form.tipo_projeto,
         tipo_controle_horas: form.tipo_controle_horas
       });
@@ -105,6 +107,7 @@ export default function Home() {
         <button onClick={() => fileInputRef.current?.click()} disabled={restoring}>
           {restoring ? 'Restaurando…' : 'Restaurar projeto de backup (JSON)'}
         </button>
+        <button onClick={() => navigate('/cadastros')}>👥 Fornecedores &amp; Equipe</button>
         <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleRestoreFile} />
       </div>
 
@@ -136,24 +139,6 @@ export default function Home() {
               />
             </div>
             <div className="field">
-              <label>Valor da hora (R$)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.hourly_rate}
-                onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label>Total de horas vendidas</label>
-              <input
-                type="number"
-                step="0.5"
-                value={form.total_hours_sold}
-                onChange={(e) => setForm({ ...form, total_hours_sold: e.target.value })}
-              />
-            </div>
-            <div className="field">
               <label>Tipo de projeto</label>
               <select
                 value={form.tipo_projeto}
@@ -163,16 +148,47 @@ export default function Home() {
                 <option value="maquina">Construção de máquinas / células robotizadas</option>
               </select>
             </div>
-            {form.tipo_projeto === 'servico' && (
+            {form.tipo_projeto === 'servico' ? (
+              <>
+                <div className="field">
+                  <label>Valor da hora (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.hourly_rate}
+                    onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label>Total de horas vendidas</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={form.total_hours_sold}
+                    onChange={(e) => setForm({ ...form, total_hours_sold: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label>Controle de horas</label>
+                  <select
+                    value={form.tipo_controle_horas}
+                    onChange={(e) => setForm({ ...form, tipo_controle_horas: e.target.value })}
+                  >
+                    <option value="estimativa">Estimativa (orçamento, sem trava)</option>
+                    <option value="contratado">Contratado (teto com alerta de estouro)</option>
+                  </select>
+                </div>
+              </>
+            ) : (
               <div className="field">
-                <label>Controle de horas</label>
-                <select
-                  value={form.tipo_controle_horas}
-                  onChange={(e) => setForm({ ...form, tipo_controle_horas: e.target.value })}
-                >
-                  <option value="estimativa">Estimativa (orçamento, sem trava)</option>
-                  <option value="contratado">Contratado (teto com alerta de estouro)</option>
-                </select>
+                <label>Valor fixo do projeto (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.valor_fixo_projeto}
+                  onChange={(e) => setForm({ ...form, valor_fixo_projeto: e.target.value })}
+                  placeholder="Preço fechado combinado com o cliente"
+                />
               </div>
             )}
           </div>
@@ -202,7 +218,9 @@ export default function Home() {
               <span className="badge">{p.tipo_projeto === 'maquina' ? 'Construção de máquina' : 'Serviço'}</span>
             </div>
             <div className="mono muted" style={{ marginTop: 8 }}>
-              {formatMoney(p.hourly_rate)}/h · {p.total_hours_sold || 0}h vendidas
+              {p.tipo_projeto === 'maquina'
+                ? `Valor fixo: ${formatMoney(p.valor_fixo_projeto)}`
+                : `${formatMoney(p.hourly_rate)}/h · ${p.total_hours_sold || 0}h vendidas`}
             </div>
           </button>
         ))}

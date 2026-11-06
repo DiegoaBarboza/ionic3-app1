@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { updateProject } from '../data/projects.js';
@@ -6,6 +6,7 @@ import { createHours, deleteHours, updateHours } from '../data/hours.js';
 import { calcHoras, calcReembolso, formatDateShort, formatMoney } from '../lib/calc.js';
 import { sumHours } from '../lib/aggregate.js';
 import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
+import { ensureStagesSeeded, stageColor } from '../data/stages.js';
 import StatCard from '../components/StatCard.jsx';
 
 const emptyForm = {
@@ -17,11 +18,13 @@ const emptyForm = {
   km_ida: '',
   km_volta: '',
   valor_km: '',
-  pedagio: ''
+  pedagio: '',
+  stage_id: ''
 };
 
 export default function Hours() {
   const { project, hours, setProject, reloadProject } = useProject();
+  const isMaquina = project.tipo_projeto === 'maquina';
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -32,6 +35,22 @@ export default function Hours() {
   });
   const [printStart, setPrintStart] = useState('');
   const [printEnd, setPrintEnd] = useState('');
+  const [stages, setStages] = useState([]);
+
+  useEffect(() => {
+    if (!isMaquina) return;
+    let active = true;
+    ensureStagesSeeded(project.id).then((s) => {
+      if (active) setStages(s.map((st) => ({ ...st, color: stageColor(st.stage_key) })));
+    });
+    return () => {
+      active = false;
+    };
+  }, [project.id, isMaquina]);
+
+  function stageLabel(stageId) {
+    return stages.find((s) => s.id === stageId)?.stage_label || '—';
+  }
 
   const preview = calcHoras(form.start_time, form.end_time, form.lunch);
   const reembolsoPreview = calcReembolso(form);
@@ -75,7 +94,8 @@ export default function Hours() {
         km_ida: Number(form.km_ida) || 0,
         km_volta: Number(form.km_volta) || 0,
         valor_km: Number(form.valor_km) || 0,
-        pedagio: Number(form.pedagio) || 0
+        pedagio: Number(form.pedagio) || 0,
+        stage_id: isMaquina ? form.stage_id || null : null
       };
       if (editingId) {
         await updateHours(editingId, payload);
@@ -104,7 +124,8 @@ export default function Hours() {
       km_ida: h.km_ida || '',
       km_volta: h.km_volta || '',
       valor_km: h.valor_km || '',
-      pedagio: h.pedagio || ''
+      pedagio: h.pedagio || '',
+      stage_id: h.stage_id || ''
     });
   }
 
@@ -148,37 +169,57 @@ export default function Hours() {
 
   return (
     <div>
-      <div className="panel" style={{ marginBottom: 16 }}>
-        <div className="form-row">
-          <div className="field">
-            <label>Valor da hora (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={contract.hourly_rate}
-              onChange={(e) => setContract({ ...contract, hourly_rate: e.target.value })}
-              onBlur={saveContract}
-            />
-          </div>
-          <div className="field">
-            <label>Total de horas vendidas</label>
-            <input
-              type="number"
-              step="0.5"
-              value={contract.total_hours_sold}
-              onChange={(e) => setContract({ ...contract, total_hours_sold: e.target.value })}
-              onBlur={saveContract}
-            />
-          </div>
+      {isMaquina ? (
+        <div className="grid cols-4" style={{ marginBottom: 16 }}>
+          {stages.map((s) => {
+            const apontado = hours.filter((h) => h.stage_id === s.id).reduce((acc, h) => acc + (Number(h.hours) || 0), 0);
+            const orcado = Number(s.horas_orcadas) || 0;
+            if (orcado === 0 && apontado === 0) return null;
+            return (
+              <div key={s.id} className="stat-card" style={{ borderLeft: `4px solid ${s.color}` }}>
+                <div className="label">{s.stage_label}</div>
+                <div className="value mono">
+                  {apontado}h{orcado > 0 ? ` / ${orcado}h` : ''}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="panel" style={{ marginBottom: 16 }}>
+            <div className="form-row">
+              <div className="field">
+                <label>Valor da hora (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={contract.hourly_rate}
+                  onChange={(e) => setContract({ ...contract, hourly_rate: e.target.value })}
+                  onBlur={saveContract}
+                />
+              </div>
+              <div className="field">
+                <label>Total de horas vendidas</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={contract.total_hours_sold}
+                  onChange={(e) => setContract({ ...contract, total_hours_sold: e.target.value })}
+                  onBlur={saveContract}
+                />
+              </div>
+            </div>
+          </div>
 
-      <div className="grid cols-4" style={{ marginBottom: 16 }}>
-        <StatCard label="Vendidas" value={`${vendidas}h`} />
-        <StatCard label="Consumidas" value={`${consumidas}h`} />
-        <StatCard label="Restantes" value={`${restantes}h`} />
-        <StatCard label="Valor por hora" value={formatMoney(project.hourly_rate)} />
-      </div>
+          <div className="grid cols-4" style={{ marginBottom: 16 }}>
+            <StatCard label="Vendidas" value={`${vendidas}h`} />
+            <StatCard label="Consumidas" value={`${consumidas}h`} />
+            <StatCard label="Restantes" value={`${restantes}h`} />
+            <StatCard label="Valor por hora" value={formatMoney(project.hourly_rate)} />
+          </div>
+        </>
+      )}
 
       <form className="panel" onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
         <div className="form-row">
@@ -221,6 +262,19 @@ export default function Hours() {
           <label>Descrição da atividade</label>
           <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         </div>
+        {isMaquina && (
+          <div className="field">
+            <label>Área</label>
+            <select value={form.stage_id} onChange={(e) => setForm({ ...form, stage_id: e.target.value })} required>
+              <option value="">— selecione a área —</option>
+              {stages.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.stage_label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="form-row">
           <div className="field">
             <label>KM de ida</label>
@@ -313,6 +367,7 @@ export default function Hours() {
                 <th>Data</th>
                 <th>Horas</th>
                 <th>Descrição</th>
+                {isMaquina && <th>Área</th>}
                 <th>Início</th>
                 <th>Fim</th>
                 <th>Almoço</th>
@@ -328,6 +383,7 @@ export default function Hours() {
                     {h.hours}h
                   </td>
                   <td className="hours-description">{h.description}</td>
+                  {isMaquina && <td style={{ whiteSpace: 'nowrap' }}>{stageLabel(h.stage_id)}</td>}
                   <td style={{ whiteSpace: 'nowrap' }}>{h.start_time}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{h.end_time}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{h.lunch ? 'Sim' : 'Não'}</td>
