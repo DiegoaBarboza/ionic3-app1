@@ -84,6 +84,52 @@ export async function updateStage(id, fields) {
   return data;
 }
 
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Recalcula o cronograma em cadeia: a etapa 0 usa seu planned_start como
+ * âncora (digitado pelo Diego); cada etapa seguinte começa no dia seguinte
+ * ao fim da etapa anterior — usando o fim REAL (actual_end) quando a etapa
+ * anterior já terminou (o que empurra tudo pra frente automaticamente se
+ * atrasou), ou o fim previsto quando ainda não terminou. O fim previsto de
+ * cada etapa é início + duracao_dias - 1. Função pura: só calcula, quem
+ * chama decide o que persistir.
+ */
+export function recalcSchedule(stagesSorted) {
+  let cursor = null;
+  return stagesSorted.map((s, i) => {
+    const duracao = Number(s.duracao_dias) || 0;
+    let plannedStart = i === 0 ? s.planned_start || null : cursor;
+    let plannedEnd = s.planned_end || null;
+    if (plannedStart && duracao > 0) {
+      plannedEnd = addDays(plannedStart, duracao - 1);
+    }
+    const effectiveEnd = s.actual_end || plannedEnd;
+    // Se esta etapa não tem fim calculável (sem duração e sem fim real),
+    // as etapas seguintes também ficam sem data prevista — não dá pra
+    // "pular" uma etapa desconhecida e ainda assim confiar na data.
+    cursor = effectiveEnd ? addDays(effectiveEnd, 1) : null;
+    return { ...s, planned_start: plannedStart, planned_end: plannedEnd };
+  });
+}
+
+/** Recalcula e grava no banco só as etapas cuja data prevista mudou. */
+export async function recalcAndSaveSchedule(stagesSorted) {
+  const recalculated = recalcSchedule(stagesSorted);
+  const changed = recalculated.filter((s, i) => {
+    const orig = stagesSorted[i];
+    return s.planned_start !== orig.planned_start || s.planned_end !== orig.planned_end;
+  });
+  for (const s of changed) {
+    await updateStage(s.id, { planned_start: s.planned_start, planned_end: s.planned_end });
+  }
+  return recalculated;
+}
+
 /** Soma de horas já apontadas (tabela hours.stage_id) para uma etapa. */
 export async function sumHoursByStage(projectId) {
   const { data, error } = await supabase.from('hours').select('stage_id, hours').eq('project_id', projectId);

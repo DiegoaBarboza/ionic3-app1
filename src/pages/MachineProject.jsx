@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
-import { ensureStagesSeeded, stageColor, stageStatusInfo, sumHoursByStage, updateStage, STAGE_STATUS } from '../data/stages.js';
+import {
+  ensureStagesSeeded,
+  recalcAndSaveSchedule,
+  stageColor,
+  stageStatusInfo,
+  sumHoursByStage,
+  updateStage,
+  STAGE_STATUS
+} from '../data/stages.js';
 import { listStageTeam, listPessoas, assignPessoaToStage, removePessoaFromStage } from '../data/pessoas.js';
 import { listFornecedores, createFornecedor } from '../data/fornecedores.js';
 import {
@@ -239,6 +247,7 @@ export default function MachineProject() {
       setLoadingStages(true);
       try {
         const seeded = await ensureStagesSeeded(project.id);
+        const recalculated = await recalcAndSaveSchedule(seeded);
         const [tm, ps, forn, horas, enc] = await Promise.all([
           listStageTeam(project.id),
           listPessoas(),
@@ -247,7 +256,7 @@ export default function MachineProject() {
           listEncomendas(project.id)
         ]);
         if (!active) return;
-        setStages(seeded.map((s) => ({ ...s, color: stageColor(s.stage_key) })));
+        setStages(recalculated.map((s) => ({ ...s, color: stageColor(s.stage_key) })));
         setTeam(tm);
         setPessoas(ps);
         setFornecedores(forn);
@@ -275,7 +284,13 @@ export default function MachineProject() {
 
   async function handleStageField(stage, field, value) {
     const updated = await updateStage(stage.id, { [field]: value === '' ? null : value });
-    setStages((prev) => prev.map((s) => (s.id === stage.id ? { ...updated, color: s.color } : s)));
+    let next = stages.map((s) => (s.id === stage.id ? { ...updated, color: s.color } : s));
+    if (field === 'planned_start' || field === 'duracao_dias' || field === 'actual_end') {
+      const sorted = [...next].sort((a, b) => a.stage_order - b.stage_order);
+      const recalculated = await recalcAndSaveSchedule(sorted);
+      next = recalculated.map((s) => ({ ...s, color: stageColor(s.stage_key) }));
+    }
+    setStages(next);
   }
 
   async function handleAddTeam(stage, pessoaId) {
@@ -434,21 +449,38 @@ export default function MachineProject() {
                 </div>
 
                 <div className="form-row">
+                  {stage.stage_order === 0 ? (
+                    <div className="field">
+                      <label>Início previsto (âncora do cronograma)</label>
+                      <input
+                        type="date"
+                        defaultValue={stage.planned_start || ''}
+                        onBlur={(e) => handleStageField(stage, 'planned_start', e.target.value)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="field">
+                      <label>Início previsto</label>
+                      <div className="mono" style={{ padding: '9px 0' }}>
+                        {stage.planned_start ? formatDate(stage.planned_start) : '—'}
+                      </div>
+                    </div>
+                  )}
                   <div className="field">
-                    <label>Início previsto</label>
+                    <label>Duração estimada (dias)</label>
                     <input
-                      type="date"
-                      defaultValue={stage.planned_start || ''}
-                      onBlur={(e) => handleStageField(stage, 'planned_start', e.target.value)}
+                      type="number"
+                      step="1"
+                      min="0"
+                      defaultValue={stage.duracao_dias || ''}
+                      onBlur={(e) => handleStageField(stage, 'duracao_dias', Number(e.target.value) || 0)}
                     />
                   </div>
                   <div className="field">
                     <label>Fim previsto</label>
-                    <input
-                      type="date"
-                      defaultValue={stage.planned_end || ''}
-                      onBlur={(e) => handleStageField(stage, 'planned_end', e.target.value)}
-                    />
+                    <div className="mono" style={{ padding: '9px 0' }}>
+                      {stage.planned_end ? formatDate(stage.planned_end) : '—'}
+                    </div>
                   </div>
                   <div className="field">
                     <label>Início real</label>
@@ -467,6 +499,10 @@ export default function MachineProject() {
                     />
                   </div>
                 </div>
+                <p className="muted" style={{ marginTop: -6, marginBottom: 10 }}>
+                  As datas previstas das etapas seguintes são calculadas sozinhas a partir da duração de cada
+                  etapa. Se o fim real atrasar, o cronograma das próximas etapas desloca automaticamente.
+                </p>
 
                 <div className="field">
                   <label>Horas orçadas para esta área</label>
