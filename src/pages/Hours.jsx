@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
+import { supabase } from '../lib/supabaseClient.js';
 import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
 import { calcHoras, calcReembolso, formatDateShort, formatMoney } from '../lib/calc.js';
@@ -38,6 +39,19 @@ export default function Hours() {
   const vendidas = Number(project.total_hours_sold) || 0;
   const restantes = Math.max(0, vendidas - consumidas);
 
+  /**
+   * Dispara o agente autônomo (Edge Function + Gemini) que analisa as
+   * descrições diárias e preenche pendências/sugestões/dificuldades/atraso
+   * do relatório de finalização. Roda em segundo plano a cada lançamento de
+   * horas; falha silenciosa para nunca travar o registro da jornada.
+   */
+  function triggerServiceReportAgent() {
+    supabase.functions.invoke('analyze-service-report', { body: { project_id: project.id } }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Agente de relatório indisponível:', err);
+    });
+  }
+
   async function saveContract() {
     const updated = await updateProject(project.id, {
       hourly_rate: Number(contract.hourly_rate) || 0,
@@ -71,6 +85,7 @@ export default function Hours() {
       setEditingId(null);
       setForm(emptyForm);
       await reloadProject();
+      if (project.tipo_projeto === 'servico') triggerServiceReportAgent();
     } catch (err) {
       setError(err.message);
     } finally {
