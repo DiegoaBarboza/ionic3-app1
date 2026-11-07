@@ -3,6 +3,7 @@ import { useProject } from '../context/ProjectContext.jsx';
 import { createEntry, deleteEntry, updateEntry } from '../data/entries.js';
 import { CATEGORIES, categoryInfo, formatDate, formatMoney } from '../lib/calc.js';
 import ReceiptCapture from '../components/ReceiptCapture.jsx';
+import MoneyInput from '../components/MoneyInput.jsx';
 
 const emptyForm = {
   type: 'gasto',
@@ -132,13 +133,7 @@ export default function Entries() {
           )}
           <div className="field">
             <label>Valor (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              required
-            />
+            <MoneyInput value={form.amount} onChange={(v) => setForm({ ...form, amount: v })} required />
           </div>
           <div className="field">
             <label>Data</label>

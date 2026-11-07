@@ -8,6 +8,7 @@ import { sumHours } from '../lib/aggregate.js';
 import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
 import { ensureStagesSeeded, stageColor } from '../data/stages.js';
 import StatCard from '../components/StatCard.jsx';
+import MoneyInput from '../components/MoneyInput.jsx';
 
 const emptyForm = {
   date: new Date().toISOString().slice(0, 10),
@@ -191,11 +192,9 @@ export default function Hours() {
             <div className="form-row">
               <div className="field">
                 <label>Valor da hora (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
+                <MoneyInput
                   value={contract.hourly_rate}
-                  onChange={(e) => setContract({ ...contract, hourly_rate: e.target.value })}
+                  onChange={(v) => setContract({ ...contract, hourly_rate: v })}
                   onBlur={saveContract}
                 />
               </div>
@@ -298,21 +297,11 @@ export default function Hours() {
           </div>
           <div className="field">
             <label>Valor por KM (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={form.valor_km}
-              onChange={(e) => setForm({ ...form, valor_km: e.target.value })}
-            />
+            <MoneyInput value={form.valor_km} onChange={(v) => setForm({ ...form, valor_km: v })} />
           </div>
           <div className="field">
             <label>Pedágio do dia (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={form.pedagio}
-              onChange={(e) => setForm({ ...form, pedagio: e.target.value })}
-            />
+            <MoneyInput value={form.pedagio} onChange={(v) => setForm({ ...form, pedagio: v })} />
           </div>
         </div>
         <p className="muted">

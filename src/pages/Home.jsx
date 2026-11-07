@@ -9,6 +9,7 @@ import { readBackupFile } from '../lib/backup.js';
 import { formatMoney } from '../lib/calc.js';
 import { financeiroPorProjeto } from '../lib/aggregate.js';
 import { getPushStatus, pushSupported, subscribeToPush, unsubscribeFromPush } from '../lib/push.js';
+import MoneyInput from '../components/MoneyInput.jsx';
 
 const emptyForm = {
   name: '',
@@ -194,12 +195,7 @@ export default function Home() {
               <>
                 <div className="field">
                   <label>Valor da hora (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.hourly_rate}
-                    onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })}
-                  />
+                  <MoneyInput value={form.hourly_rate} onChange={(v) => setForm({ ...form, hourly_rate: v })} />
                 </div>
                 <div className="field">
                   <label>Total de horas vendidas</label>
@@ -224,12 +220,9 @@ export default function Home() {
             ) : (
               <div className="field">
                 <label>Valor fixo do projeto (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
+                <MoneyInput
                   value={form.valor_fixo_projeto}
-                  onChange={(e) => setForm({ ...form, valor_fixo_projeto: e.target.value })}
-                  placeholder="Preço fechado combinado com o cliente"
+                  onChange={(v) => setForm({ ...form, valor_fixo_projeto: v })}
                 />
               </div>
             )}
