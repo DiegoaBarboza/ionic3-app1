@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { getProject, updateProject } from '../data/projects.js';
 import { formatDate } from '../lib/calc.js';
+
+const SAVE_DEBOUNCE_MS = 700;
 
 function phaseOf(project, hours) {
   if (project.data_finalizacao && (project.relatorio_pendencias || project.relatorio_sugestoes || project.relatorio_dificuldades)) {
@@ -15,10 +17,27 @@ function phaseOf(project, hours) {
   return 'Descoberta & Escopo';
 }
 
-function Field({ label, children }) {
+function Field({ label, status, children }) {
   return (
     <div className="field">
-      <label>{label}</label>
+      <label>
+        {label}
+        {status === 'saving' && (
+          <span className="muted" style={{ marginLeft: 8, fontWeight: 400 }}>
+            salvando…
+          </span>
+        )}
+        {status === 'saved' && (
+          <span className="muted" style={{ marginLeft: 8, fontWeight: 400, color: 'var(--positive)' }}>
+            ✓ salvo
+          </span>
+        )}
+        {status === 'erro' && (
+          <span style={{ marginLeft: 8, fontWeight: 400, color: 'var(--negative)' }}>
+            erro ao salvar — tente de novo
+          </span>
+        )}
+      </label>
       {children}
     </div>
   );
@@ -40,19 +59,59 @@ export default function ServiceProject() {
   });
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState('');
+  const [saveStatus, setSaveStatus] = useState({});
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const timers = useRef({});
+  const statusClearTimers = useRef({});
 
-  async function saveField(field, value) {
-    const updated = await updateProject(project.id, { [field]: value });
-    setProject(updated);
+  // Garante que qualquer edição pendente (debounce ainda não disparado) seja
+  // salva se o usuário sair da tela antes dos 700ms — comum no celular,
+  // quando o blur do campo não dá tempo de disparar antes da troca de aba.
+  useEffect(() => {
+    return () => {
+      Object.entries(timers.current).forEach(([name, timer]) => {
+        clearTimeout(timer);
+        const value = draftRef.current[name];
+        if (value !== (project[name] || '')) {
+          updateProject(project.id, { [name]: value === '' ? null : value }).catch(() => {});
+        }
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+
+  async function saveField(name, value) {
+    setSaveStatus((s) => ({ ...s, [name]: 'saving' }));
+    try {
+      const updated = await updateProject(project.id, { [name]: value === '' ? null : value });
+      setProject(updated);
+      setSaveStatus((s) => ({ ...s, [name]: 'saved' }));
+      clearTimeout(statusClearTimers.current[name]);
+      statusClearTimers.current[name] = setTimeout(() => {
+        setSaveStatus((s) => ({ ...s, [name]: null }));
+      }, 2000);
+    } catch (err) {
+      setSaveStatus((s) => ({ ...s, [name]: 'erro' }));
+    }
+  }
+
+  function flushSave(name) {
+    clearTimeout(timers.current[name]);
+    delete timers.current[name];
+    if (draftRef.current[name] !== (project[name] || '')) saveField(name, draftRef.current[name]);
   }
 
   function field(name) {
     return {
       value: draft[name],
-      onChange: (e) => setDraft({ ...draft, [name]: e.target.value }),
-      onBlur: () => {
-        if (draft[name] !== (project[name] || '')) saveField(name, draft[name] || null);
-      }
+      onChange: (e) => {
+        const value = e.target.value;
+        setDraft((d) => ({ ...d, [name]: value }));
+        clearTimeout(timers.current[name]);
+        timers.current[name] = setTimeout(() => flushSave(name), SAVE_DEBOUNCE_MS);
+      },
+      onBlur: () => flushSave(name)
     };
   }
 
@@ -109,7 +168,7 @@ export default function ServiceProject() {
         <div className="label" style={{ marginBottom: 10 }}>
           1. Descoberta &amp; Escopo
         </div>
-        <Field label="Escopo solicitado pelo cliente">
+        <Field label="Escopo solicitado pelo cliente" status={saveStatus.escopo_solicitado}>
           <textarea rows={3} {...field('escopo_solicitado')} />
         </Field>
       </div>
@@ -118,7 +177,7 @@ export default function ServiceProject() {
         <div className="label" style={{ marginBottom: 10 }}>
           2. Pedido
         </div>
-        <Field label="Data do pedido">
+        <Field label="Data do pedido" status={saveStatus.data_pedido}>
           <input type="date" {...field('data_pedido')} />
         </Field>
       </div>
@@ -128,10 +187,10 @@ export default function ServiceProject() {
           3. Cronograma / Agendamento do serviço
         </div>
         <div className="form-row">
-          <Field label="Início agendado">
+          <Field label="Início agendado" status={saveStatus.data_inicio_agendada}>
             <input type="date" {...field('data_inicio_agendada')} />
           </Field>
-          <Field label="Término previsto">
+          <Field label="Término previsto" status={saveStatus.data_termino_prevista}>
             <input type="date" {...field('data_termino_prevista')} />
           </Field>
         </div>
@@ -141,7 +200,7 @@ export default function ServiceProject() {
         <div className="label" style={{ marginBottom: 10 }}>
           4. Finalização — relatório de atividades
         </div>
-        <Field label="Data de finalização">
+        <Field label="Data de finalização" status={saveStatus.data_finalizacao}>
           <input type="date" {...field('data_finalizacao')} />
         </Field>
 
@@ -164,13 +223,13 @@ export default function ServiceProject() {
           base nas descrições diárias. Revise e ajuste à vontade.
         </p>
 
-        <Field label="Pendências">
+        <Field label="Pendências" status={saveStatus.relatorio_pendencias}>
           <textarea rows={3} {...field('relatorio_pendencias')} />
         </Field>
-        <Field label="Sugestões">
+        <Field label="Sugestões" status={saveStatus.relatorio_sugestoes}>
           <textarea rows={3} {...field('relatorio_sugestoes')} />
         </Field>
-        <Field label="Dificuldades encontradas">
+        <Field label="Dificuldades encontradas" status={saveStatus.relatorio_dificuldades}>
           <textarea rows={3} {...field('relatorio_dificuldades')} />
         </Field>
 
@@ -185,7 +244,7 @@ export default function ServiceProject() {
         </div>
 
         {draft.teve_atraso && (
-          <Field label="Motivo do atraso">
+          <Field label="Motivo do atraso" status={saveStatus.motivo_atraso}>
             <textarea rows={2} {...field('motivo_atraso')} />
           </Field>
         )}
