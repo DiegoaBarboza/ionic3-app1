@@ -1,4 +1,4 @@
-import { CATEGORIES, categoryInfo } from './calc.js';
+import { CATEGORIES, categoryInfo, isPagamento } from './calc.js';
 
 export function computeTotals(entries) {
   let receita = 0;
@@ -10,20 +10,26 @@ export function computeTotals(entries) {
   return { receita, gasto, lucro: receita - gasto };
 }
 
+/** Soma só os lançamentos de receita marcados como Pagamento — é isso que abate o valor a receber. */
+export function sumPagamentos(entries) {
+  return entries.reduce((acc, e) => (e.type === 'receita' && isPagamento(e) ? acc + (Number(e.amount) || 0) : acc), 0);
+}
+
 export function sumHours(hours) {
   return hours.reduce((acc, h) => acc + (Number(h.hours) || 0), 0);
 }
 
 /**
  * Valor projetado a receber pelas horas já lançadas (horas x valor/hora),
- * menos o que já foi recebido (lançamentos tipo receita). Mesma lógica da
- * view v_projetos_financeiro no Supabase — calculado aqui no cliente porque
- * o Dashboard já tem entries/hours carregados, sem precisar de outra consulta.
+ * menos os pagamentos já recebidos (lançamentos de receita categoria
+ * "Pagamento" — outros tipos de receita, como adiantamento/reembolso, não
+ * abatem). Mesma lógica da view v_projetos_financeiro no Supabase —
+ * calculado aqui no cliente porque o Dashboard já tem entries/hours
+ * carregados, sem precisar de outra consulta.
  */
 export function receitaAReceber(entries, hours, hourlyRate) {
   const projetado = sumHours(hours) * (Number(hourlyRate) || 0);
-  const recebido = computeTotals(entries).receita;
-  return projetado - recebido;
+  return projetado - sumPagamentos(entries);
 }
 
 /**
@@ -33,9 +39,13 @@ export function receitaAReceber(entries, hours, hourlyRate) {
  */
 export function financeiroPorProjeto(projects, entries, hours) {
   const recebidoPorProjeto = {};
+  const pagamentosPorProjeto = {};
   for (const e of entries) {
     if (e.type !== 'receita') continue;
     recebidoPorProjeto[e.project_id] = (recebidoPorProjeto[e.project_id] || 0) + (Number(e.amount) || 0);
+    if (isPagamento(e)) {
+      pagamentosPorProjeto[e.project_id] = (pagamentosPorProjeto[e.project_id] || 0) + (Number(e.amount) || 0);
+    }
   }
   const horasPorProjeto = {};
   for (const h of hours) {
@@ -44,11 +54,12 @@ export function financeiroPorProjeto(projects, entries, hours) {
   const result = {};
   for (const p of projects) {
     const recebido = recebidoPorProjeto[p.id] || 0;
+    const pagamentos = pagamentosPorProjeto[p.id] || 0;
     const projetado =
       p.tipo_projeto === 'maquina'
         ? Number(p.valor_fixo_projeto) || 0
         : (horasPorProjeto[p.id] || 0) * (Number(p.hourly_rate) || 0);
-    result[p.id] = { recebido, aReceber: Math.max(0, projetado - recebido) };
+    result[p.id] = { recebido, aReceber: Math.max(0, projetado - pagamentos) };
   }
   return result;
 }

@@ -15,7 +15,14 @@ import {
 import { useProject } from '../context/ProjectContext.jsx';
 import { updateProject } from '../data/projects.js';
 import { formatMoney } from '../lib/calc.js';
-import { computeTotals, monthlyBarData, pieDataByCategory, receitaAReceber, sumHours } from '../lib/aggregate.js';
+import {
+  computeTotals,
+  monthlyBarData,
+  pieDataByCategory,
+  receitaAReceber,
+  sumHours,
+  sumPagamentos
+} from '../lib/aggregate.js';
 import StatCard from '../components/StatCard.jsx';
 
 function InlineField({ value, onSave, placeholder }) {
@@ -45,7 +52,7 @@ export default function Dashboard() {
   const isMaquina = project.tipo_projeto === 'maquina';
   const totals = computeTotals(entries);
   const aReceber = isMaquina
-    ? (Number(project.valor_fixo_projeto) || 0) - totals.receita
+    ? (Number(project.valor_fixo_projeto) || 0) - sumPagamentos(entries)
     : receitaAReceber(entries, hours, project.hourly_rate);
   const lucro = isMaquina ? (Number(project.valor_fixo_projeto) || 0) - totals.gasto : totals.lucro;
   const horasConsumidas = sumHours(hours);
@@ -103,8 +110,8 @@ export default function Dashboard() {
         </div>
         <p className="muted" style={{ marginTop: 6 }}>
           {isMaquina
-            ? 'Valor fixo do projeto ainda não recebido em lançamentos de receita. Some um lançamento de receita quando o cliente pagar para abater esse valor.'
-            : `Horas já lançadas (${horasConsumidas}h × ${formatMoney(project.hourly_rate)}) ainda não recebidas em lançamentos de receita. Some um lançamento de receita quando o cliente pagar para abater esse valor.`}
+            ? 'Valor fixo do projeto ainda não recebido. Lance uma receita do tipo "Pagamento" quando o cliente pagar para abater esse valor — outros tipos de receita (adiantamento, reembolso…) não abatem.'
+            : `Horas já lançadas (${horasConsumidas}h × ${formatMoney(project.hourly_rate)}) ainda não recebidas. Lance uma receita do tipo "Pagamento" quando o cliente pagar para abater esse valor — outros tipos de receita (adiantamento, reembolso…) não abatem.`}
         </p>
       </div>
 

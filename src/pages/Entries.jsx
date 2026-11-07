@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
 import { createEntry, deleteEntry, updateEntry } from '../data/entries.js';
-import { CATEGORIES, categoryInfo, formatDate, formatMoney } from '../lib/calc.js';
+import { CATEGORIES, REVENUE_CATEGORIES, categoryInfo, formatDate, formatMoney, revenueCategoryInfo } from '../lib/calc.js';
 import ReceiptCapture from '../components/ReceiptCapture.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
 
@@ -44,7 +44,7 @@ export default function Entries() {
     setEditingId(entry.id);
     setForm({
       type: entry.type,
-      category: entry.category || 'diversos',
+      category: entry.category || (entry.type === 'receita' ? 'pagamento' : 'diversos'),
       amount: entry.amount,
       date: entry.date,
       description: entry.description || '',
@@ -69,7 +69,7 @@ export default function Entries() {
     try {
       const payload = {
         type: form.type,
-        category: form.type === 'gasto' ? form.category : null,
+        category: form.category || null,
         amount: Number(form.amount),
         date: form.date,
         description: form.description || null,
@@ -103,14 +103,14 @@ export default function Entries() {
           <button
             type="button"
             className={form.type === 'gasto' ? 'primary' : ''}
-            onClick={() => setForm({ ...form, type: 'gasto' })}
+            onClick={() => setForm({ ...form, type: 'gasto', category: 'diversos' })}
           >
             Gasto
           </button>
           <button
             type="button"
             className={form.type === 'receita' ? 'primary' : ''}
-            onClick={() => setForm({ ...form, type: 'receita' })}
+            onClick={() => setForm({ ...form, type: 'receita', category: 'pagamento' })}
           >
             Receita
           </button>
@@ -119,18 +119,21 @@ export default function Entries() {
         {form.type === 'gasto' && <ReceiptCapture onExtracted={handleExtracted} />}
 
         <div className="form-row">
-          {form.type === 'gasto' && (
-            <div className="field">
-              <label>Categoria</label>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.icon} {c.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="field">
+            <label>{form.type === 'gasto' ? 'Categoria' : 'Tipo de receita'}</label>
+            <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              {(form.type === 'gasto' ? CATEGORIES : REVENUE_CATEGORIES).map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.icon} {c.label}
+                </option>
+              ))}
+            </select>
+            {form.type === 'receita' && (
+              <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+                Só "Pagamento" abate do valor a receber do projeto.
+              </p>
+            )}
+          </div>
           <div className="field">
             <label>Valor (R$)</label>
             <MoneyInput value={form.amount} onChange={(v) => setForm({ ...form, amount: v })} required />
@@ -188,7 +191,7 @@ export default function Entries() {
       <div className="panel">
         {filtered.length === 0 && <p className="muted">Nenhum lançamento aqui.</p>}
         {filtered.map((entry) => {
-          const cat = entry.type === 'gasto' ? categoryInfo(entry.category) : null;
+          const cat = entry.type === 'gasto' ? categoryInfo(entry.category) : revenueCategoryInfo(entry.category);
           return (
             <div className="list-row" key={entry.id}>
               <div style={{ minWidth: 0 }}>

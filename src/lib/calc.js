@@ -58,3 +58,25 @@ export const CATEGORIES = [
 export function categoryInfo(value) {
   return CATEGORIES.find((c) => c.value === value) || CATEGORIES[CATEGORIES.length - 1];
 }
+
+/**
+ * Só "Pagamento" abate do valor a receber (horas trabalhadas x valor/hora,
+ * ou valor fixo combinado, menos os pagamentos já lançados). Os outros tipos
+ * entram na receita total/lucro do projeto, mas não quitam o valor pendente.
+ */
+export const REVENUE_CATEGORIES = [
+  { value: 'pagamento', label: 'Pagamento', icon: '💰', color: '#15803d' },
+  { value: 'adiantamento', label: 'Adiantamento', icon: '⏩', color: '#2fb8dc' },
+  { value: 'reembolso', label: 'Reembolso', icon: '↩️', color: '#8b96a5' },
+  { value: 'outro', label: 'Outro', icon: '📎', color: '#a78bfa' }
+];
+
+export function revenueCategoryInfo(value) {
+  // lançamentos antigos não tinham categoria — tratados como Pagamento
+  return REVENUE_CATEGORIES.find((c) => c.value === value) || REVENUE_CATEGORIES[0];
+}
+
+/** true se o lançamento de receita conta como pagamento (abate o valor a receber). */
+export function isPagamento(entry) {
+  return !entry.category || entry.category === 'pagamento';
+}
