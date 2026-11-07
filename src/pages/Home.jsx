@@ -5,6 +5,7 @@ import Logo from '../components/Logo.jsx';
 import { createProject, listProjects, restoreProjectFromBackup } from '../data/projects.js';
 import { readBackupFile } from '../lib/backup.js';
 import { formatMoney } from '../lib/calc.js';
+import { getPushStatus, pushSupported, subscribeToPush, unsubscribeFromPush } from '../lib/push.js';
 
 const emptyForm = {
   name: '',
@@ -30,10 +31,32 @@ export default function Home() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [pushStatus, setPushStatus] = useState('unsupported');
+  const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
     refresh();
+    if (pushSupported()) getPushStatus().then(setPushStatus);
   }, []);
+
+  async function handleTogglePush() {
+    setPushBusy(true);
+    setError('');
+    try {
+      if (pushStatus === 'subscribed') {
+        await unsubscribeFromPush();
+        setPushStatus('unsubscribed');
+      } else {
+        await subscribeToPush();
+        setPushStatus('subscribed');
+      }
+    } catch (err) {
+      setError(err.message);
+      setPushStatus(await getPushStatus());
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   async function refresh() {
     setLoading(true);
@@ -108,6 +131,15 @@ export default function Home() {
           {restoring ? 'Restaurando…' : 'Restaurar projeto de backup (JSON)'}
         </button>
         <button onClick={() => navigate('/cadastros')}>👥 Fornecedores &amp; Equipe</button>
+        {pushSupported() && (
+          <button onClick={handleTogglePush} disabled={pushBusy}>
+            {pushBusy
+              ? 'Aguarde…'
+              : pushStatus === 'subscribed'
+                ? '🔔 Alertas ativados (tocar p/ desativar)'
+                : '🔕 Ativar alertas neste celular'}
+          </button>
+        )}
         <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleRestoreFile} />
       </div>
 
