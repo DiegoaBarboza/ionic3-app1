@@ -72,8 +72,8 @@ export default function Entries() {
         amount: Number(form.amount),
         date: form.date,
         description: form.description || null,
-        city: form.city || null,
-        state: form.state || null
+        city: form.type === 'gasto' ? form.city || null : null,
+        state: form.type === 'gasto' ? form.state || null : null
       };
       if (editingId) {
         await updateEntry(editingId, payload);
@@ -144,19 +144,23 @@ export default function Entries() {
             <label>Data</label>
             <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
           </div>
-          <div className="field">
-            <label>Cidade</label>
-            <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Estado</label>
-            <input
-              value={form.state}
-              maxLength={2}
-              style={{ textTransform: 'uppercase' }}
-              onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
-            />
-          </div>
+          {form.type === 'gasto' && (
+            <>
+              <div className="field">
+                <label>Cidade</label>
+                <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Estado</label>
+                <input
+                  value={form.state}
+                  maxLength={2}
+                  style={{ textTransform: 'uppercase' }}
+                  onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="field">

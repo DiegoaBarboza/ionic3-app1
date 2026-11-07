@@ -26,6 +26,33 @@ export function receitaAReceber(entries, hours, hourlyRate) {
   return projetado - recebido;
 }
 
+/**
+ * Recebido e a receber de cada projeto, pra visão de portfólio (tela Home,
+ * lista de projetos). Mesma regra do Dashboard de cada projeto: serviço usa
+ * horas lançadas x valor/hora, máquina usa o valor fixo combinado.
+ */
+export function financeiroPorProjeto(projects, entries, hours) {
+  const recebidoPorProjeto = {};
+  for (const e of entries) {
+    if (e.type !== 'receita') continue;
+    recebidoPorProjeto[e.project_id] = (recebidoPorProjeto[e.project_id] || 0) + (Number(e.amount) || 0);
+  }
+  const horasPorProjeto = {};
+  for (const h of hours) {
+    horasPorProjeto[h.project_id] = (horasPorProjeto[h.project_id] || 0) + (Number(h.hours) || 0);
+  }
+  const result = {};
+  for (const p of projects) {
+    const recebido = recebidoPorProjeto[p.id] || 0;
+    const projetado =
+      p.tipo_projeto === 'maquina'
+        ? Number(p.valor_fixo_projeto) || 0
+        : (horasPorProjeto[p.id] || 0) * (Number(p.hourly_rate) || 0);
+    result[p.id] = { recebido, aReceber: Math.max(0, projetado - recebido) };
+  }
+  return result;
+}
+
 export function pieDataByCategory(entries) {
   const totals = {};
   for (const e of entries) {

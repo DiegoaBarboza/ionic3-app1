@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from '../components/Logo.jsx';
 import { createProject, listProjects, restoreProjectFromBackup } from '../data/projects.js';
+import { listAllEntriesFinanceiro } from '../data/entries.js';
+import { listAllHoursFinanceiro } from '../data/hours.js';
 import { readBackupFile } from '../lib/backup.js';
 import { formatMoney } from '../lib/calc.js';
+import { financeiroPorProjeto } from '../lib/aggregate.js';
 import { getPushStatus, pushSupported, subscribeToPush, unsubscribeFromPush } from '../lib/push.js';
 
 const emptyForm = {
@@ -25,6 +28,7 @@ export default function Home() {
   const fileInputRef = useRef(null);
 
   const [projects, setProjects] = useState([]);
+  const [financeiro, setFinanceiro] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -62,7 +66,13 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
-      setProjects(await listProjects());
+      const [projs, entries, hours] = await Promise.all([
+        listProjects(),
+        listAllEntriesFinanceiro(),
+        listAllHoursFinanceiro()
+      ]);
+      setProjects(projs);
+      setFinanceiro(financeiroPorProjeto(projs, entries, hours));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -235,27 +245,48 @@ export default function Home() {
       {!loading && projects.length === 0 && <p className="muted">Nenhum projeto ainda. Crie o primeiro acima.</p>}
 
       <div className="grid cols-2">
-        {projects.map((p) => (
-          <button
-            key={p.id}
-            className="panel"
-            style={{ textAlign: 'left', cursor: 'pointer' }}
-            onClick={() => navigate(`/project/${p.id}/dashboard`)}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>{p.name}</div>
-            <div className="muted">
-              {p.client_name || 'Sem cliente'} {p.location ? `· ${p.location}` : ''}
-            </div>
-            <div style={{ marginTop: 8 }}>
-              <span className="badge">{p.tipo_projeto === 'maquina' ? 'Construção de máquina' : 'Serviço'}</span>
-            </div>
-            <div className="mono muted" style={{ marginTop: 8 }}>
-              {p.tipo_projeto === 'maquina'
-                ? `Valor fixo: ${formatMoney(p.valor_fixo_projeto)}`
-                : `${formatMoney(p.hourly_rate)}/h · ${p.total_hours_sold || 0}h vendidas`}
-            </div>
-          </button>
-        ))}
+        {projects.map((p) => {
+          const fin = financeiro[p.id] || { recebido: 0, aReceber: 0 };
+          return (
+            <button
+              key={p.id}
+              className="panel"
+              style={{ textAlign: 'left', cursor: 'pointer' }}
+              onClick={() => navigate(`/project/${p.id}/dashboard`)}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>{p.name}</div>
+              <div className="muted">
+                {p.client_name || 'Sem cliente'} {p.location ? `· ${p.location}` : ''}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <span className="badge">{p.tipo_projeto === 'maquina' ? 'Construção de máquina' : 'Serviço'}</span>
+              </div>
+              <div className="mono muted" style={{ marginTop: 8 }}>
+                {p.tipo_projeto === 'maquina'
+                  ? `Valor fixo: ${formatMoney(p.valor_fixo_projeto)}`
+                  : `${formatMoney(p.hourly_rate)}/h · ${p.total_hours_sold || 0}h vendidas`}
+              </div>
+              <div className="form-row" style={{ marginTop: 10, gap: 16 }}>
+                <div>
+                  <div className="muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Recebido
+                  </div>
+                  <div className="money positive" style={{ fontWeight: 600 }}>
+                    {formatMoney(fin.recebido)}
+                  </div>
+                </div>
+                <div>
+                  <div className="muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    A receber
+                  </div>
+                  <div className="money" style={{ fontWeight: 600 }}>
+                    {formatMoney(fin.aReceber)}
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

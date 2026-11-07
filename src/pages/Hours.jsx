@@ -228,6 +228,20 @@ export default function Hours() {
             <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
           </div>
           <div className="field">
+            <label>&nbsp;</label>
+            <div className="checkbox-row">
+              <input
+                type="checkbox"
+                id="lunch"
+                checked={form.lunch}
+                onChange={(e) => setForm({ ...form, lunch: e.target.checked })}
+              />
+              <label htmlFor="lunch">Teve almoço (-1h)</label>
+            </div>
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="field">
             <label>Início</label>
             <input
               type="time"
@@ -244,18 +258,6 @@ export default function Hours() {
               onChange={(e) => setForm({ ...form, end_time: e.target.value })}
               required
             />
-          </div>
-          <div className="field">
-            <label>&nbsp;</label>
-            <div className="checkbox-row">
-              <input
-                type="checkbox"
-                id="lunch"
-                checked={form.lunch}
-                onChange={(e) => setForm({ ...form, lunch: e.target.checked })}
-              />
-              <label htmlFor="lunch">Teve almoço (-1h)</label>
-            </div>
           </div>
         </div>
         <div className="field">

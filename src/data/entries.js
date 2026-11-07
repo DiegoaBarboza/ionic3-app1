@@ -1,5 +1,12 @@
 import { supabase } from '../lib/supabaseClient.js';
 
+/** Só os campos usados pra calcular recebido/a receber de todos os projetos (visão de portfólio). */
+export async function listAllEntriesFinanceiro() {
+  const { data, error } = await supabase.from('entries').select('project_id, type, amount');
+  if (error) throw error;
+  return data;
+}
+
 export async function listEntries(projectId) {
   const { data, error } = await supabase
     .from('entries')
