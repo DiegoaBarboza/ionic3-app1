@@ -20,6 +20,7 @@ import {
   listEncomendas,
   updateEncomenda
 } from '../data/encomendas.js';
+import { PECA_STATUS, createPeca, deletePeca, listPecas, pecaStatusInfo, updatePeca } from '../data/pecas.js';
 import { formatDate, formatMoney } from '../lib/calc.js';
 
 const emptyEncomenda = {
@@ -29,6 +30,15 @@ const emptyEncomenda = {
   data_pedido: '',
   prazo_combinado: '',
   data_entrega: '',
+  observacoes: ''
+};
+
+const emptyPeca = {
+  item: '',
+  quantidade: 1,
+  unidade: 'un',
+  status: 'a_comprar',
+  encomenda_id: '',
   observacoes: ''
 };
 
@@ -240,6 +250,10 @@ export default function MachineProject() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [novoFornecedor, setNovoFornecedor] = useState('');
+  const [pecas, setPecas] = useState([]);
+  const [pecaForm, setPecaForm] = useState(emptyPeca);
+  const [editingPecaId, setEditingPecaId] = useState(null);
+  const [savingPeca, setSavingPeca] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -248,12 +262,13 @@ export default function MachineProject() {
       try {
         const seeded = await ensureStagesSeeded(project.id);
         const recalculated = await recalcAndSaveSchedule(seeded);
-        const [tm, ps, forn, horas, enc] = await Promise.all([
+        const [tm, ps, forn, horas, enc, pcs] = await Promise.all([
           listStageTeam(project.id),
           listPessoas(),
           listFornecedores(),
           sumHoursByStage(project.id),
-          listEncomendas(project.id)
+          listEncomendas(project.id),
+          listPecas(project.id)
         ]);
         if (!active) return;
         setStages(recalculated.map((s) => ({ ...s, color: stageColor(s.stage_key) })));
@@ -262,6 +277,7 @@ export default function MachineProject() {
         setFornecedores(forn);
         setHorasApontadas(horas);
         setEncomendas(enc);
+        setPecas(pcs);
       } catch (err) {
         if (active) setError(err.message);
       } finally {
@@ -357,6 +373,56 @@ export default function MachineProject() {
     if (!confirm('Excluir esta encomenda?')) return;
     await deleteEncomenda(id);
     await reloadEncomendas();
+  }
+
+  async function reloadPecas() {
+    setPecas(await listPecas(project.id));
+  }
+
+  async function handlePecaSubmit(e) {
+    e.preventDefault();
+    setSavingPeca(true);
+    setError('');
+    try {
+      const payload = {
+        item: pecaForm.item,
+        quantidade: Number(pecaForm.quantidade) || 0,
+        unidade: pecaForm.unidade || 'un',
+        status: pecaForm.status,
+        encomenda_id: pecaForm.encomenda_id || null,
+        observacoes: pecaForm.observacoes || null
+      };
+      if (editingPecaId) {
+        await updatePeca(editingPecaId, payload);
+      } else {
+        await createPeca(project.id, payload);
+      }
+      setEditingPecaId(null);
+      setPecaForm(emptyPeca);
+      await reloadPecas();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingPeca(false);
+    }
+  }
+
+  function startEditPeca(p) {
+    setEditingPecaId(p.id);
+    setPecaForm({
+      item: p.item || '',
+      quantidade: p.quantidade ?? 1,
+      unidade: p.unidade || 'un',
+      status: p.status || 'a_comprar',
+      encomenda_id: p.encomenda_id || '',
+      observacoes: p.observacoes || ''
+    });
+  }
+
+  async function handleDeletePeca(id) {
+    if (!confirm('Excluir esta peça da lista?')) return;
+    await deletePeca(id);
+    await reloadPecas();
   }
 
   const etapasAtrasadas = stages.filter(isStageAtrasada);
@@ -533,6 +599,131 @@ export default function MachineProject() {
           })}
         </div>
       )}
+
+      <form className="panel" onSubmit={handlePecaSubmit} style={{ marginBottom: 16 }}>
+        <div className="label" style={{ marginBottom: 10 }}>
+          Lista de peças (BOM)
+        </div>
+        <div className="form-row">
+          <div className="field" style={{ flex: 2 }}>
+            <label>Item</label>
+            <input
+              value={pecaForm.item}
+              onChange={(e) => setPecaForm({ ...pecaForm, item: e.target.value })}
+              required
+            />
+          </div>
+          <div className="field">
+            <label>Quantidade</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={pecaForm.quantidade}
+              onChange={(e) => setPecaForm({ ...pecaForm, quantidade: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Unidade</label>
+            <input
+              value={pecaForm.unidade}
+              onChange={(e) => setPecaForm({ ...pecaForm, unidade: e.target.value })}
+              placeholder="un, kg, m…"
+            />
+          </div>
+          <div className="field">
+            <label>Status</label>
+            <select value={pecaForm.status} onChange={(e) => setPecaForm({ ...pecaForm, status: e.target.value })}>
+              {PECA_STATUS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Encomenda vinculada</label>
+            <select
+              value={pecaForm.encomenda_id}
+              onChange={(e) => setPecaForm({ ...pecaForm, encomenda_id: e.target.value })}
+            >
+              <option value="">— nenhuma —</option>
+              {encomendas.map((enc) => (
+                <option key={enc.id} value={enc.id}>
+                  {enc.descricao}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="form-row" style={{ alignItems: 'flex-end' }}>
+          <div className="field" style={{ flex: 2 }}>
+            <label>Observações</label>
+            <input
+              value={pecaForm.observacoes}
+              onChange={(e) => setPecaForm({ ...pecaForm, observacoes: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="btn-row">
+          <button type="submit" className="primary" disabled={savingPeca}>
+            {savingPeca ? 'Salvando…' : editingPecaId ? 'Salvar alterações' : 'Adicionar peça'}
+          </button>
+          {editingPecaId && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingPecaId(null);
+                setPecaForm(emptyPeca);
+              }}
+            >
+              Cancelar edição
+            </button>
+          )}
+        </div>
+      </form>
+
+      <div className="panel table-scroll" style={{ marginBottom: 16 }}>
+        {pecas.length === 0 && <p className="muted">Nenhuma peça cadastrada na lista ainda.</p>}
+        {pecas.length > 0 && (
+          <table className="hours-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qtd.</th>
+                <th>Unid.</th>
+                <th>Status</th>
+                <th>Encomenda vinculada</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pecas.map((p) => {
+                const st = pecaStatusInfo(p.status);
+                return (
+                  <tr key={p.id}>
+                    <td className="hours-description">{p.item}</td>
+                    <td className="mono">{p.quantidade}</td>
+                    <td>{p.unidade}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span className={'badge' + (st.tone ? ` ${st.tone}` : '')}>{st.label}</span>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{p.encomendas?.descricao || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <button className="ghost" onClick={() => startEditPeca(p)}>
+                        Editar
+                      </button>
+                      <button className="ghost danger" onClick={() => handleDeletePeca(p.id)}>
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <form className="panel" onSubmit={handleEncomendaSubmit} style={{ marginBottom: 16 }}>
         <div className="label" style={{ marginBottom: 10 }}>
