@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient.js';
 import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
 import { calcHoras, calcReembolso, formatDateShort, formatMoney } from '../lib/calc.js';
+import { correctText } from '../lib/aiText.js';
 import { sumHours } from '../lib/aggregate.js';
 import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
 import { ensureStagesSeeded, stageColor } from '../data/stages.js';
@@ -37,6 +38,7 @@ export default function Hours() {
   const [printStart, setPrintStart] = useState('');
   const [printEnd, setPrintEnd] = useState('');
   const [stages, setStages] = useState([]);
+  const [phase, setPhase] = useState('idle');
 
   useEffect(() => {
     if (!isMaquina) return;
@@ -85,13 +87,19 @@ export default function Hours() {
     setSaving(true);
     setError('');
     try {
+      let description = form.description?.trim() || null;
+      if (description) {
+        setPhase('revisando');
+        description = await correctText(description);
+      }
+      setPhase('salvando');
       const payload = {
         date: form.date,
         start_time: form.start_time,
         end_time: form.end_time,
         lunch: form.lunch,
         hours: calcHoras(form.start_time, form.end_time, form.lunch),
-        description: form.description || null,
+        description,
         km_ida: Number(form.km_ida) || 0,
         km_volta: Number(form.km_volta) || 0,
         valor_km: Number(form.valor_km) || 0,
@@ -111,6 +119,7 @@ export default function Hours() {
       setError(err.message);
     } finally {
       setSaving(false);
+      setPhase('idle');
     }
   }
 
@@ -262,6 +271,9 @@ export default function Hours() {
         <div className="field">
           <label>Descrição da atividade</label>
           <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+            Escreva do seu jeito — a IA revisa ortografia e concordância automaticamente ao salvar.
+          </p>
         </div>
         {isMaquina && (
           <div className="field">
@@ -311,7 +323,13 @@ export default function Hours() {
         {error && <p className="error-text">{error}</p>}
         <div className="btn-row">
           <button type="submit" className="primary" disabled={saving}>
-            {saving ? 'Salvando…' : editingId ? 'Salvar alterações' : 'Registrar jornada'}
+            {phase === 'revisando'
+              ? 'Revisando texto…'
+              : saving
+                ? 'Salvando…'
+                : editingId
+                  ? 'Salvar alterações'
+                  : 'Registrar jornada'}
           </button>
           {editingId && (
             <button
