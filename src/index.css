@@ -198,8 +198,8 @@ a {
 
 .tabbar {
   display: flex;
-  gap: 4px;
-  padding: 8px 16px 0;
+  gap: 8px;
+  padding: 10px 16px;
   overflow-x: auto;
   background: rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(14px);
@@ -208,17 +208,28 @@ a {
 }
 
 .tab-link {
-  padding: 10px 14px;
-  color: var(--text-dim);
+  padding: 9px 16px;
+  color: var(--text);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
   white-space: nowrap;
   font-size: 14px;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.tab-link:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .tab-link.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: var(--shadow-glow);
 }
 
 /* ---------- cards / grids ---------- */
