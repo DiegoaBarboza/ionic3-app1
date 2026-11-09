@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
 import { formatMoney } from '../lib/calc.js';
-import { computeTotals, rankingByCategory, sumHours } from '../lib/aggregate.js';
+import { computeTotals, rankingByCategory, receitaAReceber, sumHours, sumPagamentos } from '../lib/aggregate.js';
 import StatCard from '../components/StatCard.jsx';
 
 export default function Reports() {
@@ -17,12 +17,16 @@ export default function Reports() {
     return hours.filter((h) => (!start || h.date >= start) && (!end || h.date <= end));
   }, [hours, start, end]);
 
+  const isMaquina = project.tipo_projeto === 'maquina';
   const totals = computeTotals(filteredEntries);
   const horasPeriodo = sumHours(filteredHours);
   const ranking = rankingByCategory(filteredEntries);
   const horasConsumidasTotal = sumHours(hours);
   const vendidas = Number(project.total_hours_sold) || 0;
   const valorContrato = vendidas * (Number(project.hourly_rate) || 0);
+  const aReceber = isMaquina
+    ? Math.max(0, (Number(project.valor_fixo_projeto) || 0) - sumPagamentos(entries))
+    : Math.max(0, receitaAReceber(entries, hours, project.hourly_rate));
 
   return (
     <div>
@@ -80,25 +84,55 @@ export default function Reports() {
         </div>
 
         <div className="panel">
-          <div className="label" style={{ marginBottom: 12 }}>
-            Resumo do contrato de horas
-          </div>
-          <div className="list-row">
-            <span className="muted">Valor da hora</span>
-            <span className="mono">{formatMoney(project.hourly_rate)}</span>
-          </div>
-          <div className="list-row">
-            <span className="muted">Horas vendidas no contrato</span>
-            <span className="mono">{vendidas}h</span>
-          </div>
-          <div className="list-row">
-            <span className="muted">Horas consumidas (total geral)</span>
-            <span className="mono">{horasConsumidasTotal}h</span>
-          </div>
-          <div className="list-row">
-            <span className="muted">Valor total do contrato</span>
-            <span className="mono">{formatMoney(valorContrato)}</span>
-          </div>
+          {isMaquina ? (
+            <>
+              <div className="label" style={{ marginBottom: 12 }}>
+                Resumo do projeto (valor fixo)
+              </div>
+              <div className="list-row">
+                <span className="muted">Valor fixo do projeto</span>
+                <span className="mono">{formatMoney(project.valor_fixo_projeto)}</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Horas lançadas (total geral)</span>
+                <span className="mono">{horasConsumidasTotal}h</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Recebido (pagamentos)</span>
+                <span className="mono">{formatMoney(sumPagamentos(entries))}</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">A receber</span>
+                <span className="mono">{formatMoney(aReceber)}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="label" style={{ marginBottom: 12 }}>
+                Resumo do contrato de horas
+              </div>
+              <div className="list-row">
+                <span className="muted">Valor da hora</span>
+                <span className="mono">{formatMoney(project.hourly_rate)}</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Horas vendidas no contrato</span>
+                <span className="mono">{vendidas}h</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Horas consumidas (total geral)</span>
+                <span className="mono">{horasConsumidasTotal}h</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Valor total do contrato</span>
+                <span className="mono">{formatMoney(valorContrato)}</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">A receber</span>
+                <span className="mono">{formatMoney(aReceber)}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { createEntry, deleteEntry, updateEntry } from '../data/entries.js';
 import { CATEGORIES, REVENUE_CATEGORIES, categoryInfo, formatDate, formatMoney, revenueCategoryInfo } from '../lib/calc.js';
 import ReceiptCapture from '../components/ReceiptCapture.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
+import { openReceipt } from '../lib/receipts.js';
 
 const emptyForm = {
   type: 'gasto',
@@ -12,7 +13,8 @@ const emptyForm = {
   date: new Date().toISOString().slice(0, 10),
   description: '',
   city: '',
-  state: ''
+  state: '',
+  receipt_url: ''
 };
 
 export default function Entries() {
@@ -36,7 +38,8 @@ export default function Entries() {
       date: data.date || f.date,
       city: data.city || f.city,
       state: data.state || f.state,
-      description: data.description || f.description
+      description: data.description || f.description,
+      receipt_url: data.receiptPath || f.receipt_url
     }));
   }
 
@@ -49,7 +52,8 @@ export default function Entries() {
       date: entry.date,
       description: entry.description || '',
       city: entry.city || '',
-      state: entry.state || ''
+      state: entry.state || '',
+      receipt_url: entry.receipt_url || ''
     });
   }
 
@@ -74,7 +78,8 @@ export default function Entries() {
         date: form.date,
         description: form.description || null,
         city: form.type === 'gasto' ? form.city || null : null,
-        state: form.type === 'gasto' ? form.state || null : null
+        state: form.type === 'gasto' ? form.state || null : null,
+        receipt_url: form.type === 'gasto' ? form.receipt_url || null : null
       };
       if (editingId) {
         await updateEntry(editingId, payload);
@@ -212,6 +217,17 @@ export default function Entries() {
                 <span className={'money ' + (entry.type === 'receita' ? 'positive' : 'negative')}>
                   {entry.type === 'receita' ? '+' : '-'} {formatMoney(entry.amount)}
                 </span>
+                {entry.receipt_url && (
+                  <button
+                    className="ghost"
+                    onClick={() =>
+                      openReceipt(entry.receipt_url).catch((err) => alert('Não foi possível abrir a nota: ' + err.message))
+                    }
+                    title="Ver foto da nota fiscal"
+                  >
+                    📎 Nota
+                  </button>
+                )}
                 <button className="ghost" onClick={() => startEdit(entry)}>
                   Editar
                 </button>

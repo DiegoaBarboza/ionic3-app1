@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
+import { uploadReceipt } from '../lib/receipts.js';
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -28,6 +29,15 @@ export default function ReceiptCapture({ onExtracted }) {
     setError('');
     setPreview(URL.createObjectURL(file));
     setAnalyzing(true);
+
+    let receiptPath = null;
+    try {
+      receiptPath = await uploadReceipt(file);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Falha ao salvar a foto da nota:', err);
+    }
+
     try {
       const base64 = await fileToBase64(file);
       const { data, error: fnError } = await supabase.functions.invoke('parse-receipt', {
@@ -35,8 +45,9 @@ export default function ReceiptCapture({ onExtracted }) {
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
-      onExtracted(data);
+      onExtracted({ ...data, receiptPath });
     } catch (err) {
+      if (receiptPath) onExtracted({ receiptPath });
       setError(
         'Não foi possível analisar a nota automaticamente (' +
           err.message +

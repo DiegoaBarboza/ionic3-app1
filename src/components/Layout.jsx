@@ -4,7 +4,7 @@ import Logo from './Logo.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ProjectProvider, useProject } from '../context/ProjectContext.jsx';
 import { downloadProjectBackup, readBackupFile } from '../lib/backup.js';
-import { overwriteProjectFromBackup } from '../data/projects.js';
+import { deleteProject, overwriteProjectFromBackup } from '../data/projects.js';
 import { listStages } from '../data/stages.js';
 import { listStageTeam } from '../data/pessoas.js';
 import { listEncomendas } from '../data/encomendas.js';
@@ -25,6 +25,7 @@ function LayoutInner() {
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState('');
   const [backingUp, setBackingUp] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const tabs =
@@ -53,6 +54,26 @@ function LayoutInner() {
       setRestoreError('Não foi possível gerar o backup: ' + err.message);
     } finally {
       setBackingUp(false);
+    }
+  }
+
+  async function handleDeleteProject() {
+    const typed = prompt(
+      `Isso vai excluir PERMANENTEMENTE o projeto "${project.name}" e todos os lançamentos, horas, etapas, equipe, encomendas e peças dele — não tem como desfazer.\n\nSe quiser guardar uma cópia antes, cancele e use "Backup do projeto" primeiro.\n\nPra confirmar a exclusão, digite o nome do projeto exatamente:`
+    );
+    if (typed === null) return;
+    if (typed.trim() !== project.name) {
+      alert('Nome não confere — nada foi excluído.');
+      return;
+    }
+    setDeleting(true);
+    setRestoreError('');
+    try {
+      await deleteProject(project.id);
+      navigate('/');
+    } catch (err) {
+      setRestoreError('Não foi possível excluir o projeto: ' + err.message);
+      setDeleting(false);
     }
   }
 
@@ -116,6 +137,16 @@ function LayoutInner() {
                         disabled={restoring}
                       >
                         {restoring ? 'Restaurando…' : '⬆️ Restaurar backup'}
+                      </button>
+                      <button
+                        className="menu-item danger"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          handleDeleteProject();
+                        }}
+                        disabled={deleting}
+                      >
+                        {deleting ? 'Excluindo…' : '🗑️ Excluir projeto'}
                       </button>
                       <button
                         className="menu-item danger"
