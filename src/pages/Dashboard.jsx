@@ -66,6 +66,16 @@ export default function Dashboard() {
       <div className="panel" style={{ marginBottom: 16 }}>
         <div className="form-row">
           <div className="field">
+            <label>Nome do projeto</label>
+            <InlineField
+              value={project.name}
+              placeholder="—"
+              onSave={(v) => {
+                if (v.trim()) saveField('name', v.trim());
+              }}
+            />
+          </div>
+          <div className="field">
             <label>Cliente</label>
             <InlineField value={project.client_name} placeholder="—" onSave={(v) => saveField('client_name', v)} />
           </div>
