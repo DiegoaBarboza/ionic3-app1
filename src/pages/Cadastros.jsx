@@ -7,6 +7,7 @@ import {
   updateFornecedor
 } from '../data/fornecedores.js';
 import { createPessoa, deletePessoa, listPessoas, updatePessoa } from '../data/pessoas.js';
+import { supabase } from '../lib/supabaseClient.js';
 
 const emptyFornecedor = { nome: '', especialidade: '', contato: '', observacoes: '' };
 const emptyPessoa = { nome: '', especialidade: '', contato: '', observacoes: '' };
@@ -132,16 +133,46 @@ export default function Cadastros() {
     }
   }
 
-  async function handleDeleteForn(id) {
-    if (!confirm('Excluir este fornecedor?')) return;
-    await deleteFornecedor(id);
-    await refresh();
+  async function handleDeleteForn(f) {
+    setError('');
+    try {
+      const { count, error: countErr } = await supabase
+        .from('encomendas')
+        .select('id', { count: 'exact', head: true })
+        .eq('fornecedor_id', f.id);
+      if (countErr) throw countErr;
+      if (count > 0) {
+        alert(
+          `"${f.nome}" não pode ser excluído: está vinculado a ${count} encomenda${count > 1 ? 's' : ''} de Compras & Usinagem Externa. Desvincule ou exclua essas encomendas primeiro.`
+        );
+        return;
+      }
+      if (!confirm(`Excluir o fornecedor "${f.nome}"?`)) return;
+      await deleteFornecedor(f.id);
+      await refresh();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  async function handleDeletePessoa(id) {
-    if (!confirm('Excluir esta pessoa?')) return;
-    await deletePessoa(id);
-    await refresh();
+  async function handleDeletePessoa(p) {
+    setError('');
+    try {
+      const { count, error: countErr } = await supabase
+        .from('project_stage_team')
+        .select('id', { count: 'exact', head: true })
+        .eq('pessoa_id', p.id);
+      if (countErr) throw countErr;
+      const aviso =
+        count > 0
+          ? `"${p.nome}" está atribuído em ${count} etapa${count > 1 ? 's' : ''} de Construção de Máquinas — excluir remove essas atribuições também, sem como desfazer. `
+          : '';
+      if (!confirm(`${aviso}Excluir "${p.nome}" do cadastro?`)) return;
+      await deletePessoa(p.id);
+      await refresh();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -200,7 +231,7 @@ export default function Cadastros() {
               >
                 Editar
               </button>
-              <button className="ghost danger" onClick={() => handleDeleteForn(f.id)}>
+              <button className="ghost danger" onClick={() => handleDeleteForn(f)}>
                 Excluir
               </button>
             </div>
@@ -248,7 +279,7 @@ export default function Cadastros() {
               >
                 Editar
               </button>
-              <button className="ghost danger" onClick={() => handleDeletePessoa(p.id)}>
+              <button className="ghost danger" onClick={() => handleDeletePessoa(p)}>
                 Excluir
               </button>
             </div>

@@ -1,4 +1,8 @@
 import { supabase } from '../lib/supabaseClient.js';
+import { ensureStagesSeeded, updateStage } from './stages.js';
+import { assignPessoaToStage } from './pessoas.js';
+import { createEncomenda } from './encomendas.js';
+import { createPeca } from './pecas.js';
 
 export async function listProjects() {
   const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
@@ -29,97 +33,171 @@ export async function deleteProject(id) {
   if (error) throw error;
 }
 
-/**
- * Recria um projeto inteiro (info + entries + hours) a partir de um
- * arquivo de backup, na mesma estrutura usada pelo botão de exportar.
- */
-export async function restoreProjectFromBackup(backup) {
-  const project = await createProject({
-    name: backup.info.name,
-    hourly_rate: backup.info.hourlyRate || 0,
-    total_hours_sold: backup.info.totalHoursSold || 0,
-    client_name: backup.info.clientName || '',
-    location: backup.info.location || '',
-    client_contact: backup.info.clientContact || '',
-    created_at: backup.info.createdAt || new Date().toISOString().slice(0, 10)
-  });
+function projectFieldsFromBackup(backup) {
+  const info = backup.info || {};
+  return {
+    name: info.name,
+    tipo_projeto: info.tipo_projeto || 'servico',
+    hourly_rate: info.hourlyRate || 0,
+    total_hours_sold: info.totalHoursSold || 0,
+    tipo_controle_horas: info.tipo_controle_horas || 'estimativa',
+    valor_fixo_projeto: info.valor_fixo_projeto ?? null,
+    client_name: info.clientName || '',
+    location: info.location || '',
+    client_contact: info.clientContact || '',
+    data_pedido: info.data_pedido || null,
+    escopo_solicitado: info.escopo_solicitado || null,
+    data_inicio_agendada: info.data_inicio_agendada || null,
+    data_termino_prevista: info.data_termino_prevista || null,
+    data_finalizacao: info.data_finalizacao || null,
+    relatorio_pendencias: info.relatorio_pendencias || null,
+    relatorio_sugestoes: info.relatorio_sugestoes || null,
+    relatorio_dificuldades: info.relatorio_dificuldades || null,
+    teve_atraso: info.teve_atraso ?? false,
+    motivo_atraso: info.motivo_atraso || null
+  };
+}
 
-  if (backup.entries?.length) {
-    const rows = backup.entries.map(({ type, category, amount, date, description }) => ({
-      project_id: project.id,
+/**
+ * Recria dentro de um projeto (já criado/zerado) tudo que veio no backup:
+ * lançamentos, horas e, se for Construção de Máquinas, etapas, equipe,
+ * encomendas e lista de peças. Usado tanto por restoreProjectFromBackup
+ * (projeto novo) quanto por overwriteProjectFromBackup (projeto existente,
+ * já esvaziado antes de chamar isto).
+ */
+async function insertBackupData(projectId, tipoProjeto, backup) {
+  const entries = backup.entries || [];
+  const hours = backup.hours || [];
+  const stagesBackup = backup.stages || [];
+  const stageTeamBackup = backup.stageTeam || [];
+  const encomendasBackup = backup.encomendas || [];
+  const pecasBackup = backup.pecas || [];
+
+  if (entries.length) {
+    const rows = entries.map(({ type, category, amount, date, description, city, state, receiptUrl }) => ({
+      project_id: projectId,
       type,
       category: category || null,
       amount,
       date,
-      description: description || null
+      description: description || null,
+      city: city || null,
+      state: state || null,
+      receipt_url: receiptUrl || null
     }));
     const { error } = await supabase.from('entries').insert(rows);
     if (error) throw error;
   }
 
-  if (backup.hours?.length) {
-    const rows = backup.hours.map(({ date, startTime, endTime, lunch, hours, description }) => ({
-      project_id: project.id,
-      date,
-      start_time: startTime,
-      end_time: endTime,
-      lunch: lunch ?? true,
-      hours,
-      description: description || null
-    }));
+  let stageKeyToId = {};
+  if (tipoProjeto === 'maquina') {
+    const seeded = await ensureStagesSeeded(projectId);
+    stageKeyToId = Object.fromEntries(seeded.map((s) => [s.stage_key, s.id]));
+
+    for (const s of stagesBackup) {
+      const id = stageKeyToId[s.stageKey];
+      if (!id) continue;
+      await updateStage(id, {
+        planned_start: s.plannedStart || null,
+        planned_end: s.plannedEnd || null,
+        actual_start: s.actualStart || null,
+        actual_end: s.actualEnd || null,
+        status: s.status || 'nao_iniciada',
+        notes: s.notes || null,
+        horas_orcadas: s.horasOrcadas || 0,
+        duracao_dias: s.duracaoDias ?? null
+      });
+    }
+
+    for (const t of stageTeamBackup) {
+      const stageId = stageKeyToId[t.stageKey];
+      if (!stageId || !t.pessoaId) continue;
+      try {
+        await assignPessoaToStage(projectId, stageId, t.pessoaId, t.papel || null);
+      } catch {
+        // a pessoa do backup pode não existir mais no cadastro — ignora essa atribuição
+      }
+    }
+
+    const encomendaIdByIndex = {};
+    for (let i = 0; i < encomendasBackup.length; i++) {
+      const e = encomendasBackup[i];
+      const created = await createEncomenda(projectId, {
+        descricao: e.descricao,
+        fornecedor_id: e.fornecedorId || null,
+        tipo: e.tipo || 'peca_comprada',
+        data_pedido: e.dataPedido || null,
+        prazo_combinado: e.prazoCombinado || null,
+        data_entrega: e.dataEntrega || null,
+        observacoes: e.observacoes || null
+      });
+      encomendaIdByIndex[i] = created.id;
+    }
+
+    for (const p of pecasBackup) {
+      await createPeca(projectId, {
+        item: p.item,
+        quantidade: p.quantidade ?? 1,
+        unidade: p.unidade || 'un',
+        status: p.status || 'a_comprar',
+        encomenda_id: p.encomendaIndex != null ? encomendaIdByIndex[p.encomendaIndex] || null : null,
+        observacoes: p.observacoes || null
+      });
+    }
+  }
+
+  if (hours.length) {
+    const rows = hours.map(
+      ({ date, startTime, endTime, lunch, hours: h, description, kmIda, kmVolta, valorKm, pedagio, stageKey }) => ({
+        project_id: projectId,
+        date,
+        start_time: startTime,
+        end_time: endTime,
+        lunch: lunch ?? true,
+        hours: h,
+        description: description || null,
+        km_ida: kmIda || 0,
+        km_volta: kmVolta || 0,
+        valor_km: valorKm || 0,
+        pedagio: pedagio || 0,
+        stage_id: stageKey ? stageKeyToId[stageKey] || null : null
+      })
+    );
     const { error } = await supabase.from('hours').insert(rows);
     if (error) throw error;
   }
+}
 
+/**
+ * Recria um projeto inteiro a partir de um arquivo de backup: dados
+ * cadastrais, lançamentos, horas e, se for máquina, etapas/equipe/
+ * encomendas/peças.
+ */
+export async function restoreProjectFromBackup(backup) {
+  const fields = projectFieldsFromBackup(backup);
+  const project = await createProject({
+    ...fields,
+    created_at: backup.info.createdAt || new Date().toISOString().slice(0, 10)
+  });
+  await insertBackupData(project.id, project.tipo_projeto, backup);
   return project;
 }
 
 /**
  * Restaura um backup .json SOBRE um projeto já existente: atualiza os
- * dados cadastrais e substitui todos os lançamentos e horas pelos do
- * arquivo (apaga o que existia antes no projeto).
+ * dados cadastrais e substitui tudo (lançamentos, horas e, se for máquina,
+ * etapas/equipe/encomendas/peças) pelo conteúdo do arquivo.
  */
 export async function overwriteProjectFromBackup(projectId, backup) {
-  const project = await updateProject(projectId, {
-    name: backup.info.name,
-    hourly_rate: backup.info.hourlyRate || 0,
-    total_hours_sold: backup.info.totalHoursSold || 0,
-    client_name: backup.info.clientName || '',
-    location: backup.info.location || '',
-    client_contact: backup.info.clientContact || ''
-  });
+  const fields = projectFieldsFromBackup(backup);
+  const project = await updateProject(projectId, fields);
 
-  const { error: delEntriesErr } = await supabase.from('entries').delete().eq('project_id', projectId);
-  if (delEntriesErr) throw delEntriesErr;
-  const { error: delHoursErr } = await supabase.from('hours').delete().eq('project_id', projectId);
-  if (delHoursErr) throw delHoursErr;
-
-  if (backup.entries?.length) {
-    const rows = backup.entries.map(({ type, category, amount, date, description }) => ({
-      project_id: projectId,
-      type,
-      category: category || null,
-      amount,
-      date,
-      description: description || null
-    }));
-    const { error } = await supabase.from('entries').insert(rows);
+  const tables = ['pecas', 'encomendas', 'project_stage_team', 'project_stages', 'entries', 'hours'];
+  for (const table of tables) {
+    const { error } = await supabase.from(table).delete().eq('project_id', projectId);
     if (error) throw error;
   }
 
-  if (backup.hours?.length) {
-    const rows = backup.hours.map(({ date, startTime, endTime, lunch, hours, description }) => ({
-      project_id: projectId,
-      date,
-      start_time: startTime,
-      end_time: endTime,
-      lunch: lunch ?? true,
-      hours,
-      description: description || null
-    }));
-    const { error } = await supabase.from('hours').insert(rows);
-    if (error) throw error;
-  }
-
+  await insertBackupData(projectId, project.tipo_projeto, backup);
   return project;
 }

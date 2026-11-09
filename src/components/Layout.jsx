@@ -5,6 +5,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { ProjectProvider, useProject } from '../context/ProjectContext.jsx';
 import { downloadProjectBackup, readBackupFile } from '../lib/backup.js';
 import { overwriteProjectFromBackup } from '../data/projects.js';
+import { listStages } from '../data/stages.js';
+import { listStageTeam } from '../data/pessoas.js';
+import { listEncomendas } from '../data/encomendas.js';
+import { listPecas } from '../data/pecas.js';
 
 const BASE_TABS = [
   { to: 'dashboard', label: 'Dashboard' },
@@ -20,6 +24,7 @@ function LayoutInner() {
   const fileInputRef = useRef(null);
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState('');
+  const [backingUp, setBackingUp] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const tabs =
@@ -29,8 +34,26 @@ function LayoutInner() {
         ? [BASE_TABS[0], { to: 'construcao', label: 'Construção' }, ...BASE_TABS.slice(1)]
         : BASE_TABS;
 
-  function handleBackupDownload() {
-    downloadProjectBackup(project, entries, hours);
+  async function handleBackupDownload() {
+    setBackingUp(true);
+    setRestoreError('');
+    try {
+      let extra = {};
+      if (project.tipo_projeto === 'maquina') {
+        const [stages, stageTeam, encomendas, pecas] = await Promise.all([
+          listStages(project.id),
+          listStageTeam(project.id),
+          listEncomendas(project.id),
+          listPecas(project.id)
+        ]);
+        extra = { stages, stageTeam, encomendas, pecas };
+      }
+      downloadProjectBackup(project, entries, hours, extra);
+    } catch (err) {
+      setRestoreError('Não foi possível gerar o backup: ' + err.message);
+    } finally {
+      setBackingUp(false);
+    }
   }
 
   async function handleRestoreFile(e) {
@@ -77,11 +100,12 @@ function LayoutInner() {
                       <button
                         className="menu-item"
                         onClick={() => {
-                          handleBackupDownload();
                           setMenuOpen(false);
+                          handleBackupDownload();
                         }}
+                        disabled={backingUp}
                       >
-                        ⬇️ Backup do projeto
+                        {backingUp ? 'Gerando backup…' : '⬇️ Backup do projeto'}
                       </button>
                       <button
                         className="menu-item"
