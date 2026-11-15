@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { removeReceipts } from '../lib/receipts.js';
+import { pathsAnexosDoProjeto, removerArquivos } from './anexos.js';
 import { ensureStagesSeeded, updateStage } from './stages.js';
 import { assignPessoaToStage } from './pessoas.js';
 import { createEncomenda } from './encomendas.js';
@@ -36,9 +37,11 @@ export async function deleteProject(id) {
     .select('receipt_url')
     .eq('project_id', id)
     .not('receipt_url', 'is', null);
+  const anexos = await pathsAnexosDoProjeto(id);
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw error;
   await removeReceipts((comFoto || []).map((e) => e.receipt_url));
+  await removerArquivos(anexos);
 }
 
 function projectFieldsFromBackup(backup) {

@@ -11,6 +11,7 @@ import ServiceProject from './pages/ServiceProject.jsx';
 import MachineProject from './pages/MachineProject.jsx';
 import Cadastros from './pages/Cadastros.jsx';
 import Faturas from './pages/Faturas.jsx';
+import Anexos from './pages/Anexos.jsx';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="faturas" element={<Faturas />} />
           <Route path="horas" element={<Hours />} />
           <Route path="relatorios" element={<Reports />} />
+          <Route path="anexos" element={<Anexos />} />
         </Route>
       </Route>
 

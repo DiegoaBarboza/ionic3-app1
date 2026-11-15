@@ -16,7 +16,8 @@ const BASE_TABS = [
   { to: 'lancamentos', label: 'Lançamentos' },
   { to: 'faturas', label: 'Faturas' },
   { to: 'horas', label: 'Horas' },
-  { to: 'relatorios', label: 'Relatórios' }
+  { to: 'relatorios', label: 'Relatórios' },
+  { to: 'anexos', label: 'Anexos' }
 ];
 
 function LayoutInner() {
@@ -63,7 +64,7 @@ function LayoutInner() {
 
   async function handleDeleteProject() {
     const typed = prompt(
-      `Isso vai excluir PERMANENTEMENTE o projeto "${project.name}" e todos os lançamentos, horas, etapas, equipe, encomendas e peças dele — não tem como desfazer.\n\nSe quiser guardar uma cópia antes, cancele e use "Backup do projeto" primeiro.\n\nPra confirmar a exclusão, digite o nome do projeto exatamente:`
+      `Isso vai excluir PERMANENTEMENTE o projeto "${project.name}" e todos os lançamentos, horas, etapas, equipe, encomendas e peças dele — não tem como desfazer.\n\nSe quiser guardar uma cópia antes, cancele e use "Backup do projeto" primeiro (os arquivos da aba Anexos não vão no backup — baixe os que precisar).\n\nPra confirmar a exclusão, digite o nome do projeto exatamente:`
     );
     if (typed === null) return;
     if (typed.trim() !== project.name) {
