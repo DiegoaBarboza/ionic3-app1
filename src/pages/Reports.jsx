@@ -24,6 +24,10 @@ export default function Reports() {
   const horasConsumidasTotal = sumHours(hours);
   const vendidas = Number(project.total_hours_sold) || 0;
   const valorContrato = vendidas * (Number(project.hourly_rate) || 0);
+  // Mesmo critério do Início e do Dashboard: "Recebido" = toda receita que
+  // entrou; "Pagamentos" = só o que abate o valor a receber.
+  const recebidoTotal = computeTotals(entries).receita;
+  const pagamentosTotal = sumPagamentos(entries);
   const aReceber = isMaquina
     ? Math.max(0, (Number(project.valor_fixo_projeto) || 0) - sumPagamentos(entries))
     : Math.max(0, receitaAReceber(entries, hours, project.hourly_rate));
@@ -98,8 +102,12 @@ export default function Reports() {
                 <span className="mono">{horasConsumidasTotal}h</span>
               </div>
               <div className="list-row">
-                <span className="muted">Recebido (pagamentos)</span>
-                <span className="mono">{formatMoney(sumPagamentos(entries))}</span>
+                <span className="muted">Recebido (todas as receitas)</span>
+                <span className="mono">{formatMoney(recebidoTotal)}</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Desses, pagamentos (abatem o a receber)</span>
+                <span className="mono">{formatMoney(pagamentosTotal)}</span>
               </div>
               <div className="list-row">
                 <span className="muted">A receber</span>
@@ -126,6 +134,14 @@ export default function Reports() {
               <div className="list-row">
                 <span className="muted">Valor total do contrato</span>
                 <span className="mono">{formatMoney(valorContrato)}</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Recebido (todas as receitas)</span>
+                <span className="mono">{formatMoney(recebidoTotal)}</span>
+              </div>
+              <div className="list-row">
+                <span className="muted">Desses, pagamentos (abatem o a receber)</span>
+                <span className="mono">{formatMoney(pagamentosTotal)}</span>
               </div>
               <div className="list-row">
                 <span className="muted">A receber</span>
