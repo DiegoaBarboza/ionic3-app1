@@ -56,6 +56,8 @@ export default function Hours() {
   }
 
   const preview = calcHoras(form.start_time, form.end_time, form.lunch);
+  const viraNoite = !!form.start_time && !!form.end_time && form.end_time <= form.start_time;
+  const jornadaLonga = preview > 14;
   const reembolsoPreview = calcReembolso(form);
   const consumidas = sumHours(hours);
   const vendidas = Number(project.total_hours_sold) || 0;
@@ -84,6 +86,12 @@ export default function Hours() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (jornadaLonga || viraNoite) {
+      const motivo = viraNoite
+        ? `O fim (${form.end_time}) é antes do início (${form.start_time}), então a jornada foi contada virando a noite: ${preview}h.`
+        : `A jornada deu ${preview}h.`;
+      if (!confirm(`${motivo}\n\nEstá certo? OK = salvar assim · Cancelar = corrigir o horário`)) return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -317,7 +325,12 @@ export default function Hours() {
           </div>
         </div>
         <p className="muted">
-          Horas calculadas: <span className="mono">{preview}h</span> · Reembolso de deslocamento:{' '}
+          Horas calculadas:{' '}
+          <span className="mono" style={jornadaLonga || viraNoite ? { color: 'var(--negative)', fontWeight: 600 } : undefined}>
+            {preview}h
+          </span>
+          {viraNoite && <span style={{ color: 'var(--negative)' }}> (virando a noite — confira o horário)</span>}
+          {!viraNoite && jornadaLonga && <span style={{ color: 'var(--negative)' }}> (jornada longa — confira o horário)</span>} · Reembolso de deslocamento:{' '}
           <span className="mono">{formatMoney(reembolsoPreview)}</span>
         </p>
         {error && <p className="error-text">{error}</p>}
