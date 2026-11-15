@@ -99,6 +99,8 @@ async function insertBackupData(projectId, tipoProjeto, backup) {
   const encomendasBackup = backup.encomendas || [];
   const pecasBackup = backup.pecas || [];
   const faturasBackup = backup.faturas || [];
+  const checklistItensBackup = backup.checklistItens || [];
+  const checklistAtasBackup = backup.checklistAtas || [];
   let entryIds = [];
 
   if (entries.length) {
@@ -196,6 +198,36 @@ async function insertBackupData(projectId, tipoProjeto, backup) {
     }
   }
 
+  if (checklistItensBackup.length) {
+    const { error } = await supabase.from('checklist_itens').insert(
+      checklistItensBackup.map((c) => ({
+        project_id: projectId,
+        tipo: c.tipo,
+        grupo: c.grupo,
+        item: c.item,
+        ordem: c.ordem ?? 0,
+        resultado: c.resultado || 'pendente',
+        observacao: c.observacao || null
+      }))
+    );
+    if (error) throw error;
+  }
+  if (checklistAtasBackup.length) {
+    const { error } = await supabase.from('checklist_atas').insert(
+      checklistAtasBackup.map((a) => ({
+        project_id: projectId,
+        tipo: a.tipo,
+        data_teste: a.dataTeste || null,
+        local_teste: a.localTeste || null,
+        participantes_cliente: a.participantesCliente || null,
+        participantes_zenite: a.participantesZenite || null,
+        parecer: a.parecer || null,
+        observacoes: a.observacoes || null
+      }))
+    );
+    if (error) throw error;
+  }
+
   if (hours.length) {
     const rows = hours.map(
       ({ date, startTime, endTime, lunch, hours: h, description, kmIda, kmVolta, valorKm, pedagio, stageKey }) => ({
@@ -242,7 +274,7 @@ export async function overwriteProjectFromBackup(projectId, backup) {
   const fields = projectFieldsFromBackup(backup);
   const project = await updateProject(projectId, fields);
 
-  const tables = ['faturas', 'pecas', 'encomendas', 'project_stage_team', 'project_stages', 'entries', 'hours'];
+  const tables = ['checklist_itens', 'checklist_atas', 'faturas', 'pecas', 'encomendas', 'project_stage_team', 'project_stages', 'entries', 'hours'];
   for (const table of tables) {
     const { error } = await supabase.from(table).delete().eq('project_id', projectId);
     if (error) throw error;

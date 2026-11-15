@@ -215,3 +215,78 @@ const REPORT_BASE_STYLE = `
     .info-card, .section-body, table { box-shadow: none; }
   }
 `;
+
+/**
+ * Ata de FAT/SAT: dados do teste, resultado de cada item do checklist por
+ * grupo, não conformidades em destaque, parecer e assinaturas.
+ */
+export function buildChecklistAtaHtml({ project, tipo, ata, grupos, prog }) {
+  const titulo = tipo === 'fat' ? 'Ata de FAT — Teste de Aceitação em Fábrica' : 'Ata de SAT — Teste de Aceitação no Cliente';
+  const RES = { ok: ['OK', '#15803d'], nok: ['NÃO OK', '#dc2626'], na: ['N/A', '#64748b'], pendente: ['Pendente', '#c27803'] };
+  const PAR = { aprovado: 'Aprovado', aprovado_ressalvas: 'Aprovado com ressalvas', reprovado: 'Reprovado' };
+  const linhas = grupos
+    .map(
+      (g) => `
+      <tr><td colspan="3" style="background:#eef3f7;font-weight:700;">${escapeHtml(g.grupo)}</td></tr>
+      ${g.itens
+        .map((it) => {
+          const [label, cor] = RES[it.resultado] || RES.pendente;
+          return `<tr>
+            <td>${escapeHtml(it.item)}</td>
+            <td style="white-space:nowrap;font-weight:700;color:${cor};">${label}</td>
+            <td>${escapeHtml(it.observacao)}</td>
+          </tr>`;
+        })
+        .join('')}`
+    )
+    .join('');
+  const naoConformes = grupos.flatMap((g) => g.itens.filter((it) => it.resultado === 'nok'));
+  const a = ata || {};
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>${tipo.toUpperCase()} — ${escapeHtml(project.name)}</title>
+<style>${REPORT_BASE_STYLE}</style>
+</head>
+<body>
+  <div class="report-topbar"></div>
+  <div class="report-page">
+    <div class="report-header">
+      <img src="${LOGO_DATA_URI}" alt="Zênite Robótica" />
+      <div>
+        <div class="eyebrow">${titulo}</div>
+        <h1>${escapeHtml(project.name)}</h1>
+      </div>
+    </div>
+    <div class="info-card">
+      <div><span class="info-label">Cliente</span>${escapeHtml(project.client_name) || '—'}</div>
+      <div><span class="info-label">Data do teste</span>${a.data_teste ? formatDate(a.data_teste) : '—'}</div>
+      <div><span class="info-label">Local</span>${escapeHtml(a.local_teste || project.location) || '—'}</div>
+      <div><span class="info-label">Participantes (cliente)</span>${escapeHtml(a.participantes_cliente) || '—'}</div>
+      <div><span class="info-label">Participantes (Zênite)</span>${escapeHtml(a.participantes_zenite) || '—'}</div>
+      <div><span class="info-label">Resultado</span>${prog.ok} OK · ${prog.nok} não OK · ${prog.na} N/A · ${prog.pendente} pendentes</div>
+    </div>
+    <table>
+      <thead><tr><th>Item verificado</th><th>Resultado</th><th>Observação</th></tr></thead>
+      <tbody>${linhas || '<tr><td colspan="3">Checklist vazio.</td></tr>'}</tbody>
+    </table>
+    ${
+      naoConformes.length
+        ? `<div class="report-section"><div class="section-title">Não conformidades</div><div class="section-body">${naoConformes
+            .map((it) => `• ${escapeHtml(it.item)}${it.observacao ? ` — ${escapeHtml(it.observacao)}` : ''}`)
+            .join('<br>')}</div></div>`
+        : ''
+    }
+    <div class="report-section">
+      <div class="section-title">Parecer</div>
+      <div class="section-body"><strong>${PAR[a.parecer] || 'Não definido'}</strong>${a.observacoes ? `<br>${escapeHtml(a.observacoes).replace(/\n/g, '<br>')}` : ''}</div>
+    </div>
+    <div class="signatures">
+      <div class="signature-line">Responsável técnico — Zênite</div>
+      <div class="signature-line">Responsável — Cliente</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}

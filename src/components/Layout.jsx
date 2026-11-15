@@ -10,6 +10,7 @@ import { listStageTeam } from '../data/pessoas.js';
 import { listEncomendas } from '../data/encomendas.js';
 import { listPecas } from '../data/pecas.js';
 import { listFaturas } from '../data/faturas.js';
+import { supabase } from '../lib/supabaseClient.js';
 
 const BASE_TABS = [
   { to: 'dashboard', label: 'Dashboard' },
@@ -37,7 +38,7 @@ function LayoutInner() {
     project?.tipo_projeto === 'servico'
       ? [BASE_TABS[0], { to: 'projeto', label: 'Projeto' }, ...BASE_TABS.slice(1)]
       : project?.tipo_projeto === 'maquina'
-        ? [BASE_TABS[0], { to: 'construcao', label: 'Construção' }, ...BASE_TABS.slice(1)]
+        ? [BASE_TABS[0], { to: 'construcao', label: 'Construção' }, { to: 'fat-sat', label: 'FAT/SAT' }, ...BASE_TABS.slice(1)]
         : BASE_TABS;
 
   async function handleBackupDownload() {
@@ -52,7 +53,12 @@ function LayoutInner() {
           listEncomendas(project.id),
           listPecas(project.id)
         ]);
-        extra = { ...extra, stages, stageTeam, encomendas, pecas };
+        const [{ data: checklistItens, error: e1 }, { data: checklistAtas, error: e2 }] = await Promise.all([
+          supabase.from('checklist_itens').select('*').eq('project_id', project.id).order('ordem'),
+          supabase.from('checklist_atas').select('*').eq('project_id', project.id)
+        ]);
+        if (e1 || e2) throw e1 || e2;
+        extra = { ...extra, stages, stageTeam, encomendas, pecas, checklistItens, checklistAtas };
       }
       downloadProjectBackup(project, entries, hours, extra);
     } catch (err) {

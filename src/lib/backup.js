@@ -16,7 +16,7 @@ function slugify(text) {
  * `faturas` vale pra qualquer tipo de projeto.
  */
 export function downloadProjectBackup(project, entries, hours, extra = {}) {
-  const { stages = [], stageTeam = [], encomendas = [], pecas = [], faturas = [] } = extra;
+  const { stages = [], stageTeam = [], encomendas = [], pecas = [], faturas = [], checklistItens = [], checklistAtas = [] } = extra;
   const entryIndexById = Object.fromEntries(entries.map((e, i) => [e.id, i]));
 
   const stageKeyById = Object.fromEntries(stages.map((s) => [s.id, s.stage_key]));
@@ -110,6 +110,25 @@ export function downloadProjectBackup(project, entries, hours, extra = {}) {
           ? encomendaIndexById[p.encomenda_id]
           : null
     })),
+    checklistItens: checklistItens.map(({ tipo, grupo, item, ordem, resultado, observacao }) => ({
+      tipo,
+      grupo,
+      item,
+      ordem,
+      resultado,
+      observacao
+    })),
+    checklistAtas: checklistAtas.map(
+      ({ tipo, data_teste, local_teste, participantes_cliente, participantes_zenite, parecer, observacoes }) => ({
+        tipo,
+        dataTeste: data_teste,
+        localTeste: local_teste,
+        participantesCliente: participantes_cliente,
+        participantesZenite: participantes_zenite,
+        parecer,
+        observacoes
+      })
+    ),
     // fatura paga aponta pro lançamento de pagamento pela posição na lista
     // de entries (o restore gera ids novos)
     faturas: faturas.map((f) => ({

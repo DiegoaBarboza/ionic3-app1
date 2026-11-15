@@ -12,6 +12,7 @@ import MachineProject from './pages/MachineProject.jsx';
 import Cadastros from './pages/Cadastros.jsx';
 import Faturas from './pages/Faturas.jsx';
 import Anexos from './pages/Anexos.jsx';
+import Checklist from './pages/Checklist.jsx';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="projeto" element={<ServiceProject />} />
           <Route path="construcao" element={<MachineProject />} />
+          <Route path="fat-sat" element={<Checklist />} />
           <Route path="lancamentos" element={<Entries />} />
           <Route path="faturas" element={<Faturas />} />
           <Route path="horas" element={<Hours />} />
