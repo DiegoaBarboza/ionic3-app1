@@ -1,3 +1,4 @@
+import { todayLocal } from './calc.js';
 function slugify(text) {
   return text
     .normalize('NFD')
@@ -109,7 +110,7 @@ export function downloadProjectBackup(project, entries, hours, extra = {}) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const today = todayLocal().replace(/-/g, '');
   a.href = url;
   a.download = `backup-${slugify(project.name)}-${today}.json`;
   document.body.appendChild(a);

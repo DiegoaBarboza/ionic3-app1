@@ -3,7 +3,7 @@ import { useProject } from '../context/ProjectContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
-import { calcHoras, calcReembolso, formatDateShort, formatMoney } from '../lib/calc.js';
+import { calcHoras, calcReembolso, formatDateShort, formatMoney, todayLocal } from '../lib/calc.js';
 import { correctText } from '../lib/aiText.js';
 import { sumHours } from '../lib/aggregate.js';
 import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
@@ -11,8 +11,8 @@ import { ensureStagesSeeded, stageColor } from '../data/stages.js';
 import StatCard from '../components/StatCard.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
 
-const emptyForm = {
-  date: new Date().toISOString().slice(0, 10),
+const emptyForm = () => ({
+  date: todayLocal(),
   start_time: '08:00',
   end_time: '17:00',
   lunch: true,
@@ -22,7 +22,7 @@ const emptyForm = {
   valor_km: '',
   pedagio: '',
   stage_id: ''
-};
+});
 
 export default function Hours() {
   const { project, hours, setProject, reloadProject } = useProject();
@@ -112,7 +112,7 @@ export default function Hours() {
         await createHours(project.id, payload);
       }
       setEditingId(null);
-      setForm(emptyForm);
+      setForm(emptyForm());
       await reloadProject();
       if (project.tipo_projeto === 'servico') triggerServiceReportAgent();
     } catch (err) {
@@ -336,7 +336,7 @@ export default function Hours() {
               type="button"
               onClick={() => {
                 setEditingId(null);
-                setForm(emptyForm);
+                setForm(emptyForm());
               }}
             >
               Cancelar edição

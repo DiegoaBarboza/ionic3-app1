@@ -1,3 +1,4 @@
+import { todayLocal } from '../lib/calc.js';
 import { supabase } from '../lib/supabaseClient.js';
 
 export async function listEncomendas(projectId) {
@@ -45,7 +46,7 @@ export const TIPO_ENCOMENDA = [
 
 /** 'atrasado' | 'entregue_atraso' | 'entregue' | 'no_prazo' | 'sem_prazo' */
 export function encomendaStatus(e) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   if (e.data_entrega) {
     return e.prazo_combinado && e.data_entrega > e.prazo_combinado ? 'entregue_atraso' : 'entregue';
   }

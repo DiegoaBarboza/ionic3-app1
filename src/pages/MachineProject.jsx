@@ -21,7 +21,7 @@ import {
   updateEncomenda
 } from '../data/encomendas.js';
 import { PECA_STATUS, createPeca, deletePeca, listPecas, pecaStatusInfo, updatePeca } from '../data/pecas.js';
-import { formatDate, formatMoney } from '../lib/calc.js';
+import { formatDate, formatMoney, todayLocal } from '../lib/calc.js';
 
 const emptyEncomenda = {
   descricao: '',
@@ -43,7 +43,7 @@ const emptyPeca = {
 };
 
 function isStageAtrasada(stage) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   return stage.status !== 'concluida' && stage.planned_end && stage.planned_end < today;
 }
 
@@ -160,7 +160,7 @@ export function Gantt({ stages }) {
             const hasActual = s.actual_start;
             const pStart = hasPlanned ? ((toTime(s.planned_start) - min) / span) * 100 : 0;
             const pWidth = hasPlanned ? Math.max(1, ((toTime(s.planned_end) - toTime(s.planned_start)) / span) * 100) : 0;
-            const aEnd = s.actual_end || new Date().toISOString().slice(0, 10);
+            const aEnd = s.actual_end || todayLocal();
             const aStart = hasActual ? ((toTime(s.actual_start) - min) / span) * 100 : 0;
             const aWidth = hasActual ? Math.max(1, ((toTime(aEnd) - toTime(s.actual_start)) / span) * 100) : 0;
             const rowTop = HEADER_H + i * ROW_H;

@@ -1,3 +1,15 @@
+/**
+ * Data de hoje no fuso do aparelho (YYYY-MM-DD). Não usar
+ * new Date().toISOString() pra isso: ele dá a data em UTC, que no Brasil
+ * já vira "amanhã" depois das 21h.
+ */
+export function todayLocal() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
 function toMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
