@@ -10,6 +10,7 @@ import Reports from './pages/Reports.jsx';
 import ServiceProject from './pages/ServiceProject.jsx';
 import MachineProject from './pages/MachineProject.jsx';
 import Cadastros from './pages/Cadastros.jsx';
+import Faturas from './pages/Faturas.jsx';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="projeto" element={<ServiceProject />} />
           <Route path="construcao" element={<MachineProject />} />
           <Route path="lancamentos" element={<Entries />} />
+          <Route path="faturas" element={<Faturas />} />
           <Route path="horas" element={<Hours />} />
           <Route path="relatorios" element={<Reports />} />
         </Route>

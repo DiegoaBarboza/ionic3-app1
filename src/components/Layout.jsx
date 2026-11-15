@@ -9,10 +9,12 @@ import { listStages } from '../data/stages.js';
 import { listStageTeam } from '../data/pessoas.js';
 import { listEncomendas } from '../data/encomendas.js';
 import { listPecas } from '../data/pecas.js';
+import { listFaturas } from '../data/faturas.js';
 
 const BASE_TABS = [
   { to: 'dashboard', label: 'Dashboard' },
   { to: 'lancamentos', label: 'Lançamentos' },
+  { to: 'faturas', label: 'Faturas' },
   { to: 'horas', label: 'Horas' },
   { to: 'relatorios', label: 'Relatórios' }
 ];
@@ -41,7 +43,7 @@ function LayoutInner() {
     setBackingUp(true);
     setRestoreError('');
     try {
-      let extra = {};
+      let extra = { faturas: await listFaturas(project.id) };
       if (project.tipo_projeto === 'maquina') {
         const [stages, stageTeam, encomendas, pecas] = await Promise.all([
           listStages(project.id),
@@ -49,7 +51,7 @@ function LayoutInner() {
           listEncomendas(project.id),
           listPecas(project.id)
         ]);
-        extra = { stages, stageTeam, encomendas, pecas };
+        extra = { ...extra, stages, stageTeam, encomendas, pecas };
       }
       downloadProjectBackup(project, entries, hours, extra);
     } catch (err) {

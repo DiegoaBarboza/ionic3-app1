@@ -80,6 +80,8 @@ async function insertBackupData(projectId, tipoProjeto, backup) {
   const stageTeamBackup = backup.stageTeam || [];
   const encomendasBackup = backup.encomendas || [];
   const pecasBackup = backup.pecas || [];
+  const faturasBackup = backup.faturas || [];
+  let entryIds = [];
 
   if (entries.length) {
     const rows = entries.map(({ type, category, amount, date, description, city, state, receiptUrl }) => ({
@@ -93,7 +95,24 @@ async function insertBackupData(projectId, tipoProjeto, backup) {
       state: state || null,
       receipt_url: receiptUrl || null
     }));
-    const { error } = await supabase.from('entries').insert(rows);
+    const { data: inserted, error } = await supabase.from('entries').insert(rows).select('id');
+    if (error) throw error;
+    entryIds = (inserted || []).map((r) => r.id);
+  }
+
+  if (faturasBackup.length) {
+    const rows = faturasBackup.map((f) => ({
+      project_id: projectId,
+      descricao: f.descricao,
+      numero_nf: f.numeroNf || null,
+      valor: f.valor,
+      data_emissao: f.dataEmissao || null,
+      vencimento: f.vencimento,
+      data_pagamento: f.dataPagamento || null,
+      observacoes: f.observacoes || null,
+      entry_id: f.entryIndex != null ? entryIds[f.entryIndex] || null : null
+    }));
+    const { error } = await supabase.from('faturas').insert(rows);
     if (error) throw error;
   }
 
@@ -200,7 +219,7 @@ export async function overwriteProjectFromBackup(projectId, backup) {
   const fields = projectFieldsFromBackup(backup);
   const project = await updateProject(projectId, fields);
 
-  const tables = ['pecas', 'encomendas', 'project_stage_team', 'project_stages', 'entries', 'hours'];
+  const tables = ['faturas', 'pecas', 'encomendas', 'project_stage_team', 'project_stages', 'entries', 'hours'];
   for (const table of tables) {
     const { error } = await supabase.from(table).delete().eq('project_id', projectId);
     if (error) throw error;

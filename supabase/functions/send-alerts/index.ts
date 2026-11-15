@@ -21,9 +21,9 @@ function toISODate(d: Date) {
 }
 
 /**
- * Roda 1x/dia (cron) e verifica 4 situações: etapa de Construção atrasada,
- * projeto de serviço atrasado, encomenda atrasada e projeto ativo sem
- * lançamento de horas há vários dias. Se houver algo, manda 1 push-resumo
+ * Roda 1x/dia (cron) e verifica 5 situações: etapa de Construção atrasada,
+ * projeto de serviço atrasado, encomenda atrasada, fatura vencida sem
+ * pagamento e projeto ativo sem lançamento de horas há vários dias. Se houver algo, manda 1 push-resumo
  * pra cada dispositivo inscrito (tabela push_subscriptions). Se não houver
  * nada pendente, não manda nada — pra não virar ruído.
  */
@@ -90,7 +90,22 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 4. Projetos ativos sem lançamento de horas há DIAS_SEM_HORAS dias.
+    // 4. Faturas (contas a receber) vencidas e não pagas.
+    const { data: faturasAtrasadas, error: erroFaturas } = await supabase
+      .from("faturas")
+      .select("descricao, numero_nf, valor, vencimento, projects(name)")
+      .is("data_pagamento", null)
+      .lt("vencimento", today);
+    if (erroFaturas) throw erroFaturas;
+    for (const f of faturasAtrasadas ?? []) {
+      const valor = Number(f.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      const nf = f.numero_nf ? ` (NF ${f.numero_nf})` : "";
+      linhas.push(
+        `💸 ${(f as any).projects?.name || "Projeto"}: fatura "${f.descricao}"${nf} de ${valor} vencida em ${f.vencimento}`
+      );
+    }
+
+    // 5. Projetos ativos sem lançamento de horas há DIAS_SEM_HORAS dias.
     const { data: projetos, error: erroProjetos } = await supabase
       .from("projects")
       .select("id, name, tipo_projeto, data_finalizacao, created_at");

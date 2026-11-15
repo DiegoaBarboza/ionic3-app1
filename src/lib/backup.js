@@ -13,9 +13,11 @@ function slugify(text) {
  * falha de sincronização com o Supabase. `extra` (stages/stageTeam/
  * encomendas/pecas) só é usado em projetos de Construção de Máquinas; quem
  * chama já busca esses dados antes, porque não vêm do ProjectContext.
+ * `faturas` vale pra qualquer tipo de projeto.
  */
 export function downloadProjectBackup(project, entries, hours, extra = {}) {
-  const { stages = [], stageTeam = [], encomendas = [], pecas = [] } = extra;
+  const { stages = [], stageTeam = [], encomendas = [], pecas = [], faturas = [] } = extra;
+  const entryIndexById = Object.fromEntries(entries.map((e, i) => [e.id, i]));
 
   const stageKeyById = Object.fromEntries(stages.map((s) => [s.id, s.stage_key]));
   const encomendaIndexById = Object.fromEntries(encomendas.map((e, i) => [e.id, i]));
@@ -104,6 +106,18 @@ export function downloadProjectBackup(project, entries, hours, extra = {}) {
         p.encomenda_id != null && encomendaIndexById[p.encomenda_id] !== undefined
           ? encomendaIndexById[p.encomenda_id]
           : null
+    })),
+    // fatura paga aponta pro lançamento de pagamento pela posição na lista
+    // de entries (o restore gera ids novos)
+    faturas: faturas.map((f) => ({
+      descricao: f.descricao,
+      numeroNf: f.numero_nf,
+      valor: f.valor,
+      dataEmissao: f.data_emissao,
+      vencimento: f.vencimento,
+      dataPagamento: f.data_pagamento,
+      observacoes: f.observacoes,
+      entryIndex: f.entry_id != null && entryIndexById[f.entry_id] !== undefined ? entryIndexById[f.entry_id] : null
     }))
   };
 

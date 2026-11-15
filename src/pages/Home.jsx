@@ -5,8 +5,9 @@ import Logo from '../components/Logo.jsx';
 import { createProject, listProjects, restoreProjectFromBackup } from '../data/projects.js';
 import { listAllEntriesFinanceiro } from '../data/entries.js';
 import { listAllHoursFinanceiro } from '../data/hours.js';
+import { listFaturasEmAberto } from '../data/faturas.js';
 import { readBackupFile } from '../lib/backup.js';
-import { formatMoney } from '../lib/calc.js';
+import { formatMoney, todayLocal } from '../lib/calc.js';
 import { financeiroPorProjeto } from '../lib/aggregate.js';
 import { getPushStatus, pushSupported, subscribeToPush, unsubscribeFromPush } from '../lib/push.js';
 import MoneyInput from '../components/MoneyInput.jsx';
@@ -30,6 +31,7 @@ export default function Home() {
 
   const [projects, setProjects] = useState([]);
   const [financeiro, setFinanceiro] = useState({});
+  const [atrasadas, setAtrasadas] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -67,13 +69,23 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
-      const [projs, entries, hours] = await Promise.all([
+      const [projs, entries, hours, faturasAbertas] = await Promise.all([
         listProjects(),
         listAllEntriesFinanceiro(),
-        listAllHoursFinanceiro()
+        listAllHoursFinanceiro(),
+        // se a consulta de faturas falhar, a tela continua funcionando
+        listFaturasEmAberto().catch(() => [])
       ]);
       setProjects(projs);
       setFinanceiro(financeiroPorProjeto(projs, entries, hours));
+      const hoje = todayLocal();
+      const porProjeto = {};
+      for (const f of faturasAbertas) {
+        if (f.vencimento >= hoje) continue;
+        const atual = porProjeto[f.project_id] || { qtd: 0, total: 0 };
+        porProjeto[f.project_id] = { qtd: atual.qtd + 1, total: atual.total + (Number(f.valor) || 0) };
+      }
+      setAtrasadas(porProjeto);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -240,6 +252,7 @@ export default function Home() {
       <div className="grid cols-2">
         {projects.map((p) => {
           const fin = financeiro[p.id] || { recebido: 0, aReceber: 0 };
+          const atraso = atrasadas[p.id];
           return (
             <button
               key={p.id}
@@ -277,6 +290,22 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              {atraso && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: '6px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(220, 38, 38, 0.08)',
+                    color: 'var(--negative)',
+                    fontSize: 13,
+                    fontWeight: 600
+                  }}
+                >
+                  ⚠️ {atraso.qtd} fatura{atraso.qtd > 1 ? 's' : ''} atrasada{atraso.qtd > 1 ? 's' : ''} ·{' '}
+                  {formatMoney(atraso.total)}
+                </div>
+              )}
             </button>
           );
         })}
