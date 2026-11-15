@@ -41,7 +41,9 @@ export default function ReceiptCapture({ onExtracted }) {
     try {
       const base64 = await fileToBase64(file);
       const { data, error: fnError } = await supabase.functions.invoke('parse-receipt', {
-        body: { image: base64, mimeType: file.type || 'image/jpeg' }
+        body: { image: base64, mimeType: file.type || 'image/jpeg' },
+        // não deixa a tela "Analisando…" presa se a IA estiver lenta
+        timeout: 45000
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
