@@ -121,11 +121,18 @@ export default function ServiceProject() {
   }
 
   async function handleAnalyzeNow() {
+    const temTexto =
+      draft.relatorio_pendencias || draft.relatorio_sugestoes || draft.relatorio_dificuldades || draft.motivo_atraso;
+    const force = temTexto
+      ? confirm(
+          'Já tem texto no relatório.\n\nOK = substituir tudo pela análise da IA\nCancelar = manter o que você escreveu e só preencher o que estiver vazio'
+        )
+      : false;
     setAnalyzing(true);
     setAnalyzeMsg('');
     try {
       const { data, error } = await supabase.functions.invoke('analyze-service-report', {
-        body: { project_id: project.id }
+        body: { project_id: project.id, force }
       });
       if (error) throw error;
       if (data?.skipped) {
@@ -141,7 +148,11 @@ export default function ServiceProject() {
         });
         const updated = await getProject(project.id);
         setProject(updated);
-        setAnalyzeMsg('Atualizado pelo agente a partir das descrições de horas.');
+        setAnalyzeMsg(
+          data.preservados?.length
+            ? 'Atualizado pelo agente. Os campos que você editou à mão foram mantidos.'
+            : 'Atualizado pelo agente a partir das descrições de horas.'
+        );
       } else {
         setAnalyzeMsg(data?.error || 'Não foi possível analisar agora.');
       }

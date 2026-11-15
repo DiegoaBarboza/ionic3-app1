@@ -28,7 +28,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { project_id } = await req.json();
+    const { project_id, force } = await req.json();
     if (!project_id) {
       return jsonResponse({ ok: false, error: "project_id é obrigatório" }, 400);
     }
@@ -45,7 +45,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, name, tipo_projeto, escopo_solicitado")
+      .select(
+        "id, name, tipo_projeto, escopo_solicitado, relatorio_pendencias, relatorio_sugestoes, relatorio_dificuldades, teve_atraso, motivo_atraso, relatorio_ia_ultimo"
+      )
       .eq("id", project_id)
       .single();
 
@@ -136,7 +138,7 @@ Responda no formato JSON pedido.`;
       return jsonResponse({ ok: false, error: "Não foi possível interpretar a resposta do Gemini" }, 502);
     }
 
-    const update = {
+    const novo = {
       relatorio_pendencias: parsed.pendencias || null,
       relatorio_sugestoes: parsed.sugestoes || null,
       relatorio_dificuldades: parsed.dificuldades || null,
@@ -144,13 +146,27 @@ Responda no formato JSON pedido.`;
       motivo_atraso: parsed.teve_atraso ? parsed.motivo_atraso || null : null
     };
 
+    // Não apaga o que o Diego escreveu à mão: um campo só é atualizado se
+    // estiver vazio ou ainda igual ao que a IA escreveu da última vez.
+    // "force" (botão "Analisar agora", com confirmação na tela) ignora isso.
+    const ultimo = (project.relatorio_ia_ultimo ?? {}) as Record<string, unknown>;
+    const vazio = (v: unknown) => v === null || v === undefined || v === "" || v === false;
+    const update: Record<string, unknown> = { relatorio_ia_ultimo: novo };
+    const preservados: string[] = [];
+    for (const [campo, valor] of Object.entries(novo)) {
+      const atual = (project as Record<string, unknown>)[campo];
+      const intocado = vazio(atual) || (campo in ultimo && ultimo[campo] === atual);
+      if (force || intocado) update[campo] = valor;
+      else preservados.push(campo);
+    }
     const { error: updateError } = await supabase.from("projects").update(update).eq("id", project_id);
 
     if (updateError) {
       return jsonResponse({ ok: false, error: updateError.message }, 500);
     }
 
-    return jsonResponse({ ok: true, ...update });
+    const { relatorio_ia_ultimo: _ignored, ...aplicado } = update;
+    return jsonResponse({ ok: true, ...project, ...aplicado, preservados });
   } catch (err) {
     return jsonResponse({ ok: false, error: String((err as Error)?.message || err) }, 500);
   }
