@@ -5,6 +5,7 @@ import { CATEGORIES, REVENUE_CATEGORIES, categoryInfo, formatDate, formatMoney, 
 import ReceiptCapture from '../components/ReceiptCapture.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
 import { openReceipt, removeReceipts } from '../lib/receipts.js';
+import { exportarLancamentos } from '../lib/exportExcel.js';
 
 const emptyForm = () => ({
   type: 'gasto',
@@ -24,6 +25,23 @@ export default function Entries() {
   const [filter, setFilter] = useState('todos');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [expInicio, setExpInicio] = useState('');
+  const [expFim, setExpFim] = useState('');
+  const [exportando, setExportando] = useState(false);
+  const [expMsg, setExpMsg] = useState('');
+
+  async function handleExport() {
+    setExportando(true);
+    setExpMsg('');
+    try {
+      const n = await exportarLancamentos(project, entries, { inicio: expInicio || null, fim: expFim || null });
+      if (n === 0) setExpMsg('Nenhum lançamento no período escolhido — a planilha saiu vazia.');
+    } catch (err) {
+      setExpMsg('Não foi possível gerar a planilha: ' + err.message);
+    } finally {
+      setExportando(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     if (filter === 'todos') return entries;
@@ -196,6 +214,29 @@ export default function Entries() {
           )}
         </div>
       </form>
+
+      <div className="panel" style={{ marginBottom: 16 }}>
+        <div className="form-row">
+          <div className="field">
+            <label>Exportar — data inicial</label>
+            <input type="date" value={expInicio} onChange={(e) => setExpInicio(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Exportar — data final</label>
+            <input type="date" value={expFim} onChange={(e) => setExpFim(e.target.value)} />
+          </div>
+          <div className="field" style={{ justifyContent: 'flex-end' }}>
+            <label>&nbsp;</label>
+            <button type="button" onClick={handleExport} disabled={exportando}>
+              {exportando ? 'Gerando planilha…' : '📊 Exportar Excel'}
+            </button>
+          </div>
+        </div>
+        <p className="muted" style={{ fontSize: 12 }}>
+          Planilha com receitas e gastos do período (em branco = tudo), com totais — pronta pro contador.
+        </p>
+        {expMsg && <p className="error-text">{expMsg}</p>}
+      </div>
 
       <div className="btn-row" style={{ marginBottom: 12 }}>
         {['todos', 'receitas', 'gastos'].map((f) => (

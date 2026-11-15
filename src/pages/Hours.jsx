@@ -11,6 +11,7 @@ import { ensureStagesSeeded, stageColor } from '../data/stages.js';
 import StatCard from '../components/StatCard.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
 import JornadaRapida from '../components/JornadaRapida.jsx';
+import { exportarHoras } from '../lib/exportExcel.js';
 
 const emptyForm = () => ({
   date: todayLocal(),
@@ -40,6 +41,7 @@ export default function Hours() {
   const [printEnd, setPrintEnd] = useState('');
   const [stages, setStages] = useState([]);
   const [phase, setPhase] = useState('idle');
+  const [exportando, setExportando] = useState(false);
   const formRef = useRef(null);
   const [preenchido, setPreenchido] = useState(false);
 
@@ -183,6 +185,19 @@ export default function Hours() {
     win.document.write(html);
     win.document.close();
     win.onload = () => win.print();
+  }
+
+  async function handleExportExcel() {
+    setExportando(true);
+    setError('');
+    try {
+      const n = await exportarHoras(project, hours, { inicio: printStart || null, fim: printEnd || null, stages });
+      if (n === 0) setError('Nenhuma jornada no período escolhido — a planilha saiu vazia.');
+    } catch (err) {
+      setError('Não foi possível gerar a planilha: ' + err.message);
+    } finally {
+      setExportando(false);
+    }
   }
 
   function handlePrintActivityReport() {
@@ -406,10 +421,13 @@ export default function Hours() {
           </div>
         </div>
         <p className="muted" style={{ marginBottom: 12 }}>
-          Deixe em branco para imprimir todas as jornadas registradas.
+          Deixe em branco para imprimir ou exportar todas as jornadas registradas.
         </p>
         <div className="btn-row">
           <button onClick={handlePrint}>🖨️ Imprimir / salvar como PDF</button>
+          <button onClick={handleExportExcel} disabled={exportando}>
+            {exportando ? 'Gerando planilha…' : '📊 Exportar Excel'}
+          </button>
           {project.tipo_projeto === 'servico' && (
             <button onClick={handlePrintActivityReport}>📋 Relatório de Atividades (finalização)</button>
           )}
