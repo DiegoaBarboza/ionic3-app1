@@ -4,7 +4,7 @@ import { createEntry, deleteEntry, updateEntry } from '../data/entries.js';
 import { CATEGORIES, REVENUE_CATEGORIES, categoryInfo, formatDate, formatMoney, revenueCategoryInfo, todayLocal } from '../lib/calc.js';
 import ReceiptCapture from '../components/ReceiptCapture.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
-import { openReceipt } from '../lib/receipts.js';
+import { openReceipt, removeReceipts } from '../lib/receipts.js';
 
 const emptyForm = () => ({
   type: 'gasto',
@@ -58,6 +58,13 @@ export default function Entries() {
   }
 
   function cancelEdit() {
+    // foto enviada mas o lançamento não foi salvo: não deixa ela esquecida
+    const salva = editingId ? entries.find((x) => x.id === editingId)?.receipt_url : null;
+    if (form.receipt_url && form.receipt_url !== salva) removeReceipts([form.receipt_url]);
+    resetForm();
+  }
+
+  function resetForm() {
     setEditingId(null);
     setForm(emptyForm());
   }
@@ -82,11 +89,14 @@ export default function Entries() {
         receipt_url: form.type === 'gasto' ? form.receipt_url || null : null
       };
       if (editingId) {
+        const anterior = entries.find((x) => x.id === editingId)?.receipt_url;
         await updateEntry(editingId, payload);
+        // trocou a foto (ou virou receita): apaga a foto antiga
+        if (anterior && anterior !== payload.receipt_url) removeReceipts([anterior]);
       } else {
         await createEntry(project.id, payload);
       }
-      cancelEdit();
+      resetForm();
       await reloadProject();
     } catch (err) {
       setError(err.message);
@@ -97,7 +107,9 @@ export default function Entries() {
 
   async function handleDelete(id) {
     if (!confirm('Excluir este lançamento?')) return;
+    const foto = entries.find((x) => x.id === id)?.receipt_url;
     await deleteEntry(id);
+    if (foto) removeReceipts([foto]);
     await reloadProject();
   }
 

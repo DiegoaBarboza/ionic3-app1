@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient.js';
+import { removeReceipts } from '../lib/receipts.js';
 import { ensureStagesSeeded, updateStage } from './stages.js';
 import { assignPessoaToStage } from './pessoas.js';
 import { createEncomenda } from './encomendas.js';
@@ -29,8 +30,15 @@ export async function updateProject(id, fields) {
 }
 
 export async function deleteProject(id) {
+  // guarda as fotos de nota antes, porque os lançamentos somem em cascata
+  const { data: comFoto } = await supabase
+    .from('entries')
+    .select('receipt_url')
+    .eq('project_id', id)
+    .not('receipt_url', 'is', null);
   const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw error;
+  await removeReceipts((comFoto || []).map((e) => e.receipt_url));
 }
 
 function projectFieldsFromBackup(backup) {
