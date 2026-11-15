@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProject } from '../context/ProjectContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { updateProject } from '../data/projects.js';
@@ -10,6 +10,7 @@ import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js'
 import { ensureStagesSeeded, stageColor } from '../data/stages.js';
 import StatCard from '../components/StatCard.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
+import JornadaRapida from '../components/JornadaRapida.jsx';
 
 const emptyForm = () => ({
   date: todayLocal(),
@@ -39,6 +40,16 @@ export default function Hours() {
   const [printEnd, setPrintEnd] = useState('');
   const [stages, setStages] = useState([]);
   const [phase, setPhase] = useState('idle');
+  const formRef = useRef(null);
+  const [preenchido, setPreenchido] = useState(false);
+
+  /** Recebe os campos do cronômetro / "repetir última jornada" e leva o usuário pro formulário. */
+  function fillFromShortcut(fields) {
+    setEditingId(null);
+    setForm({ ...emptyForm(), ...fields });
+    setPreenchido(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
 
   useEffect(() => {
     if (!isMaquina) return;
@@ -121,6 +132,7 @@ export default function Hours() {
       }
       setEditingId(null);
       setForm(emptyForm());
+      setPreenchido(false);
       await reloadProject();
       if (project.tipo_projeto === 'servico') triggerServiceReportAgent();
     } catch (err) {
@@ -237,7 +249,14 @@ export default function Hours() {
         </>
       )}
 
-      <form className="panel" onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
+      <JornadaRapida project={project} hours={hours} setProject={setProject} onFill={fillFromShortcut} />
+
+      <form ref={formRef} className="panel" onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
+        {preenchido && !editingId && (
+          <p className="muted" style={{ marginBottom: 10, color: 'var(--accent)', fontWeight: 600 }}>
+            Formulário preenchido — confira os horários, escreva a atividade e registre.
+          </p>
+        )}
         <div className="form-row">
           <div className="field">
             <label>Data</label>
