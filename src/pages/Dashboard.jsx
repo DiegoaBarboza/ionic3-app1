@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -27,6 +27,13 @@ import StatCard from '../components/StatCard.jsx';
 
 function InlineField({ value, onSave, placeholder }) {
   const [draft, setDraft] = useState(value || '');
+
+  // acompanha o valor salvo (ex.: depois de restaurar um backup), sem
+  // atropelar o que está sendo digitado — o campo só é ressincronizado
+  // quando o valor de fora muda.
+  useEffect(() => {
+    setDraft(value || '');
+  }, [value]);
 
   return (
     <input

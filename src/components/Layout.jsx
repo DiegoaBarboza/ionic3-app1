@@ -27,6 +27,8 @@ function LayoutInner() {
   const [backingUp, setBackingUp] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // muda a cada restauração pra remontar a aba aberta com os dados novos
+  const [restoreVersion, setRestoreVersion] = useState(0);
 
   const tabs =
     project?.tipo_projeto === 'servico'
@@ -90,6 +92,7 @@ function LayoutInner() {
       const backup = await readBackupFile(file);
       await overwriteProjectFromBackup(project.id, backup);
       await reloadProject();
+      setRestoreVersion((v) => v + 1);
     } catch (err) {
       setRestoreError('Não foi possível restaurar o backup: ' + err.message);
     } finally {
@@ -176,7 +179,7 @@ function LayoutInner() {
           {restoreError && <p className="error-text">{restoreError}</p>}
           {error && <p className="error-text">Erro ao carregar projeto: {error}</p>}
           {!error && loading && <p className="muted">Carregando dados do projeto…</p>}
-          {!error && !loading && project && <Outlet />}
+          {!error && !loading && project && <Outlet key={restoreVersion} />}
         </div>
       </div>
     </div>
