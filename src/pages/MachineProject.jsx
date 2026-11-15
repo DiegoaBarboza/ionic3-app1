@@ -20,7 +20,8 @@ import {
   listEncomendas,
   updateEncomenda
 } from '../data/encomendas.js';
-import { PECA_STATUS, createPeca, deletePeca, listPecas, pecaStatusInfo, updatePeca } from '../data/pecas.js';
+import { PECA_STATUS, createPeca, custoPeca, deletePeca, listPecas, pecaStatusInfo, resumoBom, updatePeca } from '../data/pecas.js';
+import MoneyInput from '../components/MoneyInput.jsx';
 import { formatDate, formatMoney, todayLocal } from '../lib/calc.js';
 
 const emptyEncomenda = {
@@ -39,6 +40,8 @@ const emptyPeca = {
   unidade: 'un',
   status: 'a_comprar',
   encomenda_id: '',
+  preco_unitario: '',
+  fornecedor_id: '',
   observacoes: ''
 };
 
@@ -390,6 +393,8 @@ export default function MachineProject() {
         unidade: pecaForm.unidade || 'un',
         status: pecaForm.status,
         encomenda_id: pecaForm.encomenda_id || null,
+        preco_unitario: pecaForm.preco_unitario === '' || pecaForm.preco_unitario == null ? null : Number(pecaForm.preco_unitario),
+        fornecedor_id: pecaForm.fornecedor_id || null,
         observacoes: pecaForm.observacoes || null
       };
       if (editingPecaId) {
@@ -415,9 +420,38 @@ export default function MachineProject() {
       unidade: p.unidade || 'un',
       status: p.status || 'a_comprar',
       encomenda_id: p.encomenda_id || '',
+      preco_unitario: p.preco_unitario ?? '',
+      fornecedor_id: p.fornecedor_id || '',
       observacoes: p.observacoes || ''
     });
   }
+
+  const [gerandoId, setGerandoId] = useState(null);
+
+  /** Cria a encomenda a partir da peça (descrição, fornecedor, pedido hoje) e já vincula. */
+  async function handleGerarEncomenda(p) {
+    setGerandoId(p.id);
+    setError('');
+    try {
+      const enc = await createEncomenda(project.id, {
+        descricao: `${p.quantidade} ${p.unidade || 'un'} — ${p.item}`,
+        fornecedor_id: p.fornecedor_id || null,
+        tipo: 'peca_comprada',
+        data_pedido: todayLocal(),
+        prazo_combinado: null,
+        data_entrega: null,
+        observacoes: p.preco_unitario != null ? `Valor previsto: ${formatMoney(custoPeca(p))}` : null
+      });
+      await updatePeca(p.id, { encomenda_id: enc.id, status: 'comprado' });
+      await Promise.all([reloadPecas(), reloadEncomendas()]);
+    } catch (err) {
+      setError('Não foi possível gerar a encomenda: ' + err.message);
+    } finally {
+      setGerandoId(null);
+    }
+  }
+
+  const bom = resumoBom(pecas);
 
   async function handleDeletePeca(id) {
     if (!confirm('Excluir esta peça da lista?')) return;
@@ -657,6 +691,27 @@ export default function MachineProject() {
           </div>
         </div>
         <div className="form-row" style={{ alignItems: 'flex-end' }}>
+          <div className="field">
+            <label>Preço unitário (R$)</label>
+            <MoneyInput
+              value={pecaForm.preco_unitario}
+              onChange={(v) => setPecaForm({ ...pecaForm, preco_unitario: v })}
+            />
+          </div>
+          <div className="field">
+            <label>Fornecedor</label>
+            <select
+              value={pecaForm.fornecedor_id}
+              onChange={(e) => setPecaForm({ ...pecaForm, fornecedor_id: e.target.value })}
+            >
+              <option value="">— nenhum —</option>
+              {fornecedores.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="field" style={{ flex: 2 }}>
             <label>Observações</label>
             <input
@@ -686,12 +741,36 @@ export default function MachineProject() {
       <div className="panel table-scroll" style={{ marginBottom: 16 }}>
         {pecas.length === 0 && <p className="muted">Nenhuma peça cadastrada na lista ainda.</p>}
         {pecas.length > 0 && (
+          <div className="grid cols-3" style={{ marginBottom: 12 }}>
+            <div className="stat-card">
+              <div className="label">Custo previsto (BOM)</div>
+              <div className="value mono">{formatMoney(bom.total)}</div>
+              {bom.semPreco > 0 && (
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {bom.semPreco} {bom.semPreco > 1 ? 'itens' : 'item'} sem preço
+                </div>
+              )}
+            </div>
+            <div className="stat-card">
+              <div className="label">Comprado / em estoque</div>
+              <div className="money positive">{formatMoney(bom.garantido)}</div>
+            </div>
+            <div className="stat-card">
+              <div className="label">Falta comprar</div>
+              <div className={'money' + (bom.aComprar > 0 ? ' negative' : '')}>{formatMoney(bom.aComprar)}</div>
+            </div>
+          </div>
+        )}
+        {pecas.length > 0 && (
           <table className="hours-table">
             <thead>
               <tr>
                 <th>Item</th>
                 <th>Qtd.</th>
                 <th>Unid.</th>
+                <th>Preço un.</th>
+                <th>Total</th>
+                <th>Fornecedor</th>
                 <th>Status</th>
                 <th>Encomenda vinculada</th>
                 <th></th>
@@ -705,11 +784,28 @@ export default function MachineProject() {
                     <td className="hours-description">{p.item}</td>
                     <td className="mono">{p.quantidade}</td>
                     <td>{p.unidade}</td>
+                    <td className="mono" style={{ whiteSpace: 'nowrap' }}>
+                      {p.preco_unitario != null ? formatMoney(p.preco_unitario) : '—'}
+                    </td>
+                    <td className="mono" style={{ whiteSpace: 'nowrap' }}>
+                      {p.preco_unitario != null ? formatMoney(custoPeca(p)) : '—'}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{p.fornecedores?.nome || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <span className={'badge' + (st.tone ? ` ${st.tone}` : '')}>{st.label}</span>
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{p.encomendas?.descricao || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
+                      {!p.encomenda_id && p.status === 'a_comprar' && (
+                        <button
+                          className="ghost"
+                          disabled={gerandoId === p.id}
+                          onClick={() => handleGerarEncomenda(p)}
+                          title="Cria a encomenda com esta peça e o fornecedor, pedida hoje"
+                        >
+                          {gerandoId === p.id ? 'Gerando…' : '📦 Gerar encomenda'}
+                        </button>
+                      )}
                       <button className="ghost" onClick={() => startEditPeca(p)}>
                         Editar
                       </button>

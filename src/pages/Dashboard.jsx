@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { useProject } from '../context/ProjectContext.jsx';
 import { updateProject } from '../data/projects.js';
+import { listPecas, resumoBom } from '../data/pecas.js';
 import { formatMoney } from '../lib/calc.js';
 import {
   computeTotals,
@@ -48,6 +49,53 @@ function InlineField({ value, onSave, placeholder }) {
   );
 }
 
+/** Máquina: custo previsto pela lista de peças x o que já foi gasto, e a margem que sobra. */
+function CustoPrevisto({ bom, gasto, valorFixo }) {
+  const pct = bom.total > 0 ? Math.min(100, (gasto / bom.total) * 100) : 0;
+  const margemPrevista = valorFixo - bom.total;
+  return (
+    <div className="panel" style={{ marginBottom: 16 }}>
+      <div className="label" style={{ marginBottom: 10 }}>
+        Custo previsto × realizado
+      </div>
+      <div className="grid cols-3" style={{ marginBottom: 12 }}>
+        <div>
+          <div className="muted" style={{ fontSize: 12 }}>Previsto (lista de peças)</div>
+          <div className="mono" style={{ fontSize: 18, fontWeight: 600 }}>{formatMoney(bom.total)}</div>
+          {bom.semPreco > 0 && (
+            <div className="muted" style={{ fontSize: 12 }}>
+              {bom.semPreco} {bom.semPreco > 1 ? 'itens' : 'item'} ainda sem preço
+            </div>
+          )}
+        </div>
+        <div>
+          <div className="muted" style={{ fontSize: 12 }}>Gasto até agora</div>
+          <div className={'money' + (gasto > bom.total && bom.total > 0 ? ' negative' : '')} style={{ fontSize: 18, fontWeight: 600 }}>
+            {formatMoney(gasto)}
+          </div>
+        </div>
+        <div>
+          <div className="muted" style={{ fontSize: 12 }}>Margem prevista (valor fixo − previsto)</div>
+          <div className={'money ' + (margemPrevista >= 0 ? 'positive' : 'negative')} style={{ fontSize: 18, fontWeight: 600 }}>
+            {formatMoney(margemPrevista)}
+          </div>
+          {valorFixo > 0 && (
+            <div className="muted" style={{ fontSize: 12 }}>{((margemPrevista / valorFixo) * 100).toFixed(0)}% do valor fixo</div>
+          )}
+        </div>
+      </div>
+      <div className={'progress' + (gasto > bom.total ? ' danger' : '')}>
+        <span style={{ width: `${pct}%` }} />
+      </div>
+      <p className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+        {bom.total > 0
+          ? `${((gasto / bom.total) * 100).toFixed(0)}% do custo previsto já gasto · falta comprar ${formatMoney(bom.aComprar)} da lista.`
+          : 'Coloque preço nas peças da aba Construção pra ver o custo previsto.'}
+      </p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { project, entries, hours, setProject, reloadProject } = useProject();
 
@@ -57,6 +105,18 @@ export default function Dashboard() {
   }
 
   const isMaquina = project.tipo_projeto === 'maquina';
+  const [bom, setBom] = useState(null);
+
+  useEffect(() => {
+    if (!isMaquina) return undefined;
+    let active = true;
+    listPecas(project.id)
+      .then((pcs) => active && setBom(pcs.length ? resumoBom(pcs) : null))
+      .catch(() => active && setBom(null));
+    return () => {
+      active = false;
+    };
+  }, [project.id, isMaquina]);
   const totals = computeTotals(entries);
   const aReceber = isMaquina
     ? (Number(project.valor_fixo_projeto) || 0) - sumPagamentos(entries)
@@ -149,6 +209,9 @@ export default function Dashboard() {
             <span style={{ width: `${pct}%` }} />
           </div>
         </div>
+      )}
+      {isMaquina && bom && (
+        <CustoPrevisto bom={bom} gasto={totals.gasto} valorFixo={Number(project.valor_fixo_projeto) || 0} />
       )}
       {isMaquina && (
         <p className="muted" style={{ marginBottom: 16 }}>

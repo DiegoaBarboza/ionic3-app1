@@ -74,6 +74,20 @@ function projectFieldsFromBackup(backup) {
  * (projeto novo) quanto por overwriteProjectFromBackup (projeto existente,
  * já esvaziado antes de chamar isto).
  */
+/**
+ * O backup guarda o id do fornecedor; se ele foi excluído do cadastro depois,
+ * o insert falha por chave estrangeira. Nesse caso grava sem o fornecedor em
+ * vez de abortar a restauração inteira.
+ */
+async function semFornecedorSeSumiu(criar, fields) {
+  try {
+    return await criar(fields);
+  } catch (err) {
+    if (!fields.fornecedor_id) throw err;
+    return criar({ ...fields, fornecedor_id: null });
+  }
+}
+
 async function insertBackupData(projectId, tipoProjeto, backup) {
   const entries = backup.entries || [];
   const hours = backup.hours || [];
@@ -150,24 +164,29 @@ async function insertBackupData(projectId, tipoProjeto, backup) {
     const encomendaIdByIndex = {};
     for (let i = 0; i < encomendasBackup.length; i++) {
       const e = encomendasBackup[i];
-      const created = await createEncomenda(projectId, {
-        descricao: e.descricao,
-        fornecedor_id: e.fornecedorId || null,
-        tipo: e.tipo || 'peca_comprada',
-        data_pedido: e.dataPedido || null,
-        prazo_combinado: e.prazoCombinado || null,
-        data_entrega: e.dataEntrega || null,
-        observacoes: e.observacoes || null
-      });
+      const created = await semFornecedorSeSumiu(
+        (fields) => createEncomenda(projectId, fields),
+        {
+          descricao: e.descricao,
+          fornecedor_id: e.fornecedorId || null,
+          tipo: e.tipo || 'peca_comprada',
+          data_pedido: e.dataPedido || null,
+          prazo_combinado: e.prazoCombinado || null,
+          data_entrega: e.dataEntrega || null,
+          observacoes: e.observacoes || null
+        }
+      );
       encomendaIdByIndex[i] = created.id;
     }
 
     for (const p of pecasBackup) {
-      await createPeca(projectId, {
+      await semFornecedorSeSumiu((fields) => createPeca(projectId, fields), {
         item: p.item,
         quantidade: p.quantidade ?? 1,
         unidade: p.unidade || 'un',
         status: p.status || 'a_comprar',
+        preco_unitario: p.precoUnitario ?? null,
+        fornecedor_id: p.fornecedorId || null,
         encomenda_id: p.encomendaIndex != null ? encomendaIdByIndex[p.encomendaIndex] || null : null,
         observacoes: p.observacoes || null
       });

@@ -102,6 +102,8 @@ export function downloadProjectBackup(project, entries, hours, extra = {}) {
       quantidade: p.quantidade,
       unidade: p.unidade,
       status: p.status,
+      precoUnitario: p.preco_unitario,
+      fornecedorId: p.fornecedor_id,
       observacoes: p.observacoes,
       encomendaIndex:
         p.encomenda_id != null && encomendaIndexById[p.encomenda_id] !== undefined
