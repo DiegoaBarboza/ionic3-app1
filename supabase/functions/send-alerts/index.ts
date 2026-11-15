@@ -27,7 +27,12 @@ function toISODate(d: Date) {
  * projeto de serviço que passou de 80%/100% das horas vendidas. Se houver algo, manda 1 push-resumo
  * pra cada dispositivo inscrito (tabela push_subscriptions). Se não houver
  * nada pendente, não manda nada — pra não virar ruído.
+ *
+ * Projetos concluídos/arquivados (projects.status) não geram alertas de
+ * prazo, encomenda ou horas; fatura vencida continua alertando sempre,
+ * porque é dinheiro a receber.
  */
+const ativoStatus = (st?: string | null) => !st || st === "andamento";
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -55,12 +60,13 @@ Deno.serve(async (req: Request) => {
     // 1. Etapas de Construção de Máquinas atrasadas.
     const { data: etapasAtrasadas, error: erroEtapas } = await supabase
       .from("project_stages")
-      .select("stage_label, planned_end, projects(name)")
+      .select("stage_label, planned_end, projects(name, status)")
       .neq("status", "concluida")
       .not("planned_end", "is", null)
       .lt("planned_end", today);
     if (erroEtapas) throw erroEtapas;
     for (const e of etapasAtrasadas ?? []) {
+      if (!ativoStatus((e as any).projects?.status)) continue;
       linhas.push(`🔧 ${(e as any).projects?.name || "Projeto"}: etapa "${e.stage_label}" atrasada (previsto ${e.planned_end})`);
     }
 
@@ -69,6 +75,7 @@ Deno.serve(async (req: Request) => {
       .from("projects")
       .select("name, data_termino_prevista")
       .eq("tipo_projeto", "servico")
+      .eq("status", "andamento")
       .is("data_finalizacao", null)
       .not("data_termino_prevista", "is", null)
       .lt("data_termino_prevista", today);
@@ -80,12 +87,13 @@ Deno.serve(async (req: Request) => {
     // 3. Encomendas/compras atrasadas.
     const { data: encomendasAtrasadas, error: erroEncomendas } = await supabase
       .from("encomendas")
-      .select("descricao, prazo_combinado, projects(name)")
+      .select("descricao, prazo_combinado, projects(name, status)")
       .is("data_entrega", null)
       .not("prazo_combinado", "is", null)
       .lt("prazo_combinado", today);
     if (erroEncomendas) throw erroEncomendas;
     for (const enc of encomendasAtrasadas ?? []) {
+      if (!ativoStatus((enc as any).projects?.status)) continue;
       linhas.push(
         `📦 ${(enc as any).projects?.name || "Projeto"}: encomenda "${enc.descricao}" atrasada (prazo ${enc.prazo_combinado})`
       );
@@ -109,7 +117,7 @@ Deno.serve(async (req: Request) => {
     // 5. Projetos ativos sem lançamento de horas há DIAS_SEM_HORAS dias.
     const { data: projetos, error: erroProjetos } = await supabase
       .from("projects")
-      .select("id, name, tipo_projeto, data_finalizacao, created_at, total_hours_sold");
+      .select("id, name, tipo_projeto, data_finalizacao, created_at, total_hours_sold, status");
     if (erroProjetos) throw erroProjetos;
 
     const { data: etapasTodas, error: erroEtapasTodas } = await supabase
@@ -133,6 +141,7 @@ Deno.serve(async (req: Request) => {
     );
 
     for (const p of projetos ?? []) {
+      if (!ativoStatus(p.status)) continue;
       const ativo = p.tipo_projeto === "servico" ? !p.data_finalizacao : temEtapaEmAberto.has(p.id);
       if (!ativo) continue;
       if (p.created_at >= limiteSemHoras) continue; // projeto novo, ainda sem tempo de ter horas
@@ -149,7 +158,7 @@ Deno.serve(async (req: Request) => {
 
     // 6. Serviço consumindo o contrato: avisa a partir de 80% das horas vendidas.
     for (const p of projetos ?? []) {
-      if (p.tipo_projeto !== "servico" || p.data_finalizacao) continue;
+      if (p.tipo_projeto !== "servico" || p.data_finalizacao || !ativoStatus(p.status)) continue;
       const vendidas = Number(p.total_hours_sold) || 0;
       if (vendidas <= 0) continue;
       const usadas = Math.round((horasPorProjeto.get(p.id) || 0) * 100) / 100;

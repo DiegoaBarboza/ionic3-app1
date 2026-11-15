@@ -46,6 +46,7 @@ function projectFieldsFromBackup(backup) {
   return {
     name: info.name,
     tipo_projeto: info.tipo_projeto || 'servico',
+    status: info.status || 'andamento',
     hourly_rate: info.hourlyRate || 0,
     total_hours_sold: info.totalHoursSold || 0,
     tipo_controle_horas: info.tipo_controle_horas || 'estimativa',

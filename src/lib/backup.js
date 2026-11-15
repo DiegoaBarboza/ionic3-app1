@@ -33,6 +33,7 @@ export function downloadProjectBackup(project, entries, hours, extra = {}) {
       clientContact: project.client_contact,
       createdAt: project.created_at,
       tipo_projeto: project.tipo_projeto,
+      status: project.status,
       tipo_controle_horas: project.tipo_controle_horas,
       valor_fixo_projeto: project.valor_fixo_projeto,
       data_pedido: project.data_pedido,

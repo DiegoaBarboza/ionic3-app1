@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Logo from '../components/Logo.jsx';
@@ -23,6 +23,17 @@ const emptyForm = {
   tipo_projeto: 'servico',
   tipo_controle_horas: 'estimativa'
 };
+
+export const STATUS_PROJETO = [
+  { value: 'andamento', label: 'Em andamento' },
+  { value: 'concluido', label: 'Concluídos' },
+  { value: 'arquivado', label: 'Arquivados' },
+  { value: 'todos', label: 'Todos' }
+];
+
+function semAcento(t) {
+  return (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
@@ -101,6 +112,25 @@ export default function Home() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [busca, setBusca] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('andamento');
+  const [filtroTipo, setFiltroTipo] = useState('todos');
+
+  const contagem = useMemo(() => {
+    const c = { andamento: 0, concluido: 0, arquivado: 0, todos: projects.length };
+    for (const p of projects) c[p.status || 'andamento']++;
+    return c;
+  }, [projects]);
+
+  const visiveis = useMemo(() => {
+    const q = semAcento(busca.trim());
+    return projects.filter(
+      (p) =>
+        (filtroStatus === 'todos' || (p.status || 'andamento') === filtroStatus) &&
+        (filtroTipo === 'todos' || p.tipo_projeto === filtroTipo) &&
+        (!q || semAcento(`${p.name} ${p.client_name} ${p.location}`).includes(q))
+    );
+  }, [projects, busca, filtroStatus, filtroTipo]);
   const [pushStatus, setPushStatus] = useState('unsupported');
   const [pushBusy, setPushBusy] = useState(false);
 
@@ -316,8 +346,46 @@ export default function Home() {
 
       {!loading && projects.length === 0 && <p className="muted">Nenhum projeto ainda. Crie o primeiro acima.</p>}
 
+      {projects.length > 0 && (
+        <div className="panel" style={{ marginBottom: 12, padding: 12 }}>
+          <div className="btn-row" style={{ marginBottom: 10 }}>
+            {STATUS_PROJETO.map((st) => (
+              <button
+                key={st.value}
+                type="button"
+                className={filtroStatus === st.value ? 'primary' : ''}
+                onClick={() => setFiltroStatus(st.value)}
+              >
+                {st.label} ({contagem[st.value] || 0})
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            <div className="field" style={{ flex: '2 1 240px', marginBottom: 0 }}>
+              <input
+                type="search"
+                placeholder="🔍 Buscar por nome, cliente ou local"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
+            <div className="field" style={{ flex: '1 1 160px', marginBottom: 0 }}>
+              <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+                <option value="todos">Todos os tipos</option>
+                <option value="servico">Serviço</option>
+                <option value="maquina">Construção de máquina</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && projects.length > 0 && visiveis.length === 0 && (
+        <p className="muted">Nenhum projeto encontrado com esses filtros.</p>
+      )}
+
       <div className="grid cols-2">
-        {projects.map((p) => {
+        {visiveis.map((p) => {
           const fin = financeiro[p.id] || { recebido: 0, aReceber: 0 };
           const atraso = atrasadas[p.id];
           return (
@@ -333,6 +401,16 @@ export default function Home() {
               </div>
               <div style={{ marginTop: 8 }}>
                 <span className="badge">{p.tipo_projeto === 'maquina' ? 'Construção de máquina' : 'Serviço'}</span>
+                {p.status === 'concluido' && (
+                  <span className="badge" style={{ marginLeft: 6, color: '#15803d', borderColor: '#15803d55' }}>
+                    ✓ Concluído
+                  </span>
+                )}
+                {p.status === 'arquivado' && (
+                  <span className="badge" style={{ marginLeft: 6, color: 'var(--text-dim)' }}>
+                    🗄️ Arquivado
+                  </span>
+                )}
               </div>
               <div className="mono muted" style={{ marginTop: 8 }}>
                 {p.tipo_projeto === 'maquina'

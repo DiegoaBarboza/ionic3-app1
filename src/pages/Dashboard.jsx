@@ -98,6 +98,14 @@ export default function Dashboard() {
               onSave={(v) => saveField('client_contact', v)}
             />
           </div>
+          <div className="field">
+            <label>Situação</label>
+            <select value={project.status || 'andamento'} onChange={(e) => saveField('status', e.target.value)}>
+              <option value="andamento">Em andamento</option>
+              <option value="concluido">Concluído</option>
+              <option value="arquivado">Arquivado</option>
+            </select>
+          </div>
         </div>
       </div>
 
