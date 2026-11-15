@@ -73,6 +73,7 @@ export default function Hours() {
   const consumidas = sumHours(hours);
   const vendidas = Number(project.total_hours_sold) || 0;
   const restantes = Math.max(0, vendidas - consumidas);
+  const pctContrato = vendidas > 0 ? Math.round((consumidas / vendidas) * 100) : 0;
 
   /**
    * Dispara o agente autônomo (Edge Function + Gemini) que analisa as
@@ -239,6 +240,22 @@ export default function Hours() {
               </div>
             </div>
           </div>
+
+          {pctContrato >= 80 && (
+            <div
+              className="panel"
+              style={{
+                marginBottom: 16,
+                borderLeft: `4px solid var(--negative)`,
+                color: 'var(--negative)',
+                fontWeight: 600
+              }}
+            >
+              {pctContrato >= 100
+                ? `🚨 Horas do contrato estouradas: ${consumidas}h de ${vendidas}h (${pctContrato}%). Combine com o cliente antes de seguir lançando.`
+                : `⚠️ ${pctContrato}% das horas vendidas já foram usadas — restam ${Math.round(restantes * 100) / 100}h.`}
+            </div>
+          )}
 
           <div className="grid cols-4" style={{ marginBottom: 16 }}>
             <StatCard label="Vendidas" value={`${vendidas}h`} />

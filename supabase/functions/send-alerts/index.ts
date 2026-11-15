@@ -21,9 +21,10 @@ function toISODate(d: Date) {
 }
 
 /**
- * Roda 1x/dia (cron) e verifica 5 situações: etapa de Construção atrasada,
+ * Roda 1x/dia (cron) e verifica 6 situações: etapa de Construção atrasada,
  * projeto de serviço atrasado, encomenda atrasada, fatura vencida sem
- * pagamento e projeto ativo sem lançamento de horas há vários dias. Se houver algo, manda 1 push-resumo
+ * pagamento, projeto ativo sem lançamento de horas há vários dias e
+ * projeto de serviço que passou de 80%/100% das horas vendidas. Se houver algo, manda 1 push-resumo
  * pra cada dispositivo inscrito (tabela push_subscriptions). Se não houver
  * nada pendente, não manda nada — pra não virar ruído.
  */
@@ -108,7 +109,7 @@ Deno.serve(async (req: Request) => {
     // 5. Projetos ativos sem lançamento de horas há DIAS_SEM_HORAS dias.
     const { data: projetos, error: erroProjetos } = await supabase
       .from("projects")
-      .select("id, name, tipo_projeto, data_finalizacao, created_at");
+      .select("id, name, tipo_projeto, data_finalizacao, created_at, total_hours_sold");
     if (erroProjetos) throw erroProjetos;
 
     const { data: etapasTodas, error: erroEtapasTodas } = await supabase
@@ -116,11 +117,13 @@ Deno.serve(async (req: Request) => {
       .select("project_id, status");
     if (erroEtapasTodas) throw erroEtapasTodas;
 
-    const { data: horasTodas, error: erroHoras } = await supabase.from("hours").select("project_id, date");
+    const { data: horasTodas, error: erroHoras } = await supabase.from("hours").select("project_id, date, hours");
     if (erroHoras) throw erroHoras;
 
     const ultimaHoraPorProjeto = new Map<string, string>();
+    const horasPorProjeto = new Map<string, number>();
     for (const h of horasTodas ?? []) {
+      horasPorProjeto.set(h.project_id, (horasPorProjeto.get(h.project_id) || 0) + (Number(h.hours) || 0));
       const atual = ultimaHoraPorProjeto.get(h.project_id);
       if (!atual || h.date > atual) ultimaHoraPorProjeto.set(h.project_id, h.date);
     }
@@ -141,6 +144,21 @@ Deno.serve(async (req: Request) => {
             ? `⏱️ ${p.name}: sem horas lançadas desde ${ultimaHora}`
             : `⏱️ ${p.name}: nenhuma hora lançada ainda`
         );
+      }
+    }
+
+    // 6. Serviço consumindo o contrato: avisa a partir de 80% das horas vendidas.
+    for (const p of projetos ?? []) {
+      if (p.tipo_projeto !== "servico" || p.data_finalizacao) continue;
+      const vendidas = Number(p.total_hours_sold) || 0;
+      if (vendidas <= 0) continue;
+      const usadas = Math.round((horasPorProjeto.get(p.id) || 0) * 100) / 100;
+      const pct = Math.round((usadas / vendidas) * 100);
+      if (pct >= 100) {
+        // estouro vai pro topo: o push só mostra as 5 primeiras linhas
+        linhas.unshift(`🚨 ${p.name}: horas do contrato estouradas — ${usadas}h de ${vendidas}h (${pct}%)`);
+      } else if (pct >= 80) {
+        linhas.push(`⚠️ ${p.name}: ${pct}% das horas vendidas usadas — restam ${Math.round((vendidas - usadas) * 100) / 100}h`);
       }
     }
 
