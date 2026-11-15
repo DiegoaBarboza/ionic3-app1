@@ -1,8 +1,12 @@
 import { supabase } from '../lib/supabaseClient.js';
 
-/** Só os campos usados pra calcular recebido/a receber de todos os projetos (visão de portfólio). */
+/**
+ * Só os campos usados na visão de portfólio (Início): recebido/a receber por
+ * projeto e o resumo do mês. `category` é obrigatório aqui — sem ela todo
+ * lançamento de receita contaria como Pagamento (ver isPagamento).
+ */
 export async function listAllEntriesFinanceiro() {
-  const { data, error } = await supabase.from('entries').select('project_id, type, amount');
+  const { data, error } = await supabase.from('entries').select('project_id, type, amount, category, date');
   if (error) throw error;
   return data;
 }

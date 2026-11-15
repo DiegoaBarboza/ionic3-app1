@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabaseClient.js';
 
 /** Só os campos usados pra calcular recebido/a receber de todos os projetos (visão de portfólio). */
 export async function listAllHoursFinanceiro() {
-  const { data, error } = await supabase.from('hours').select('project_id, hours');
+  const { data, error } = await supabase.from('hours').select('project_id, hours, date');
   if (error) throw error;
   return data;
 }

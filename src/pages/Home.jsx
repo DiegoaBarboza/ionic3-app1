@@ -8,7 +8,7 @@ import { listAllHoursFinanceiro } from '../data/hours.js';
 import { listFaturasEmAberto } from '../data/faturas.js';
 import { readBackupFile } from '../lib/backup.js';
 import { formatMoney, todayLocal } from '../lib/calc.js';
-import { financeiroPorProjeto } from '../lib/aggregate.js';
+import { financeiroPorProjeto, resumoNegocio } from '../lib/aggregate.js';
 import { getPushStatus, pushSupported, subscribeToPush, unsubscribeFromPush } from '../lib/push.js';
 import MoneyInput from '../components/MoneyInput.jsx';
 
@@ -24,6 +24,68 @@ const emptyForm = {
   tipo_controle_horas: 'estimativa'
 };
 
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+function ResumoCard({ label, value, tone, detail }) {
+  return (
+    <div className="stat-card">
+      <div className="label">{label}</div>
+      <div className={tone ? `money ${tone}` : 'value mono'} style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>
+        {value}
+      </div>
+      {detail && (
+        <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+          {detail}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatHoras(h) {
+  return `${h.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}h`;
+}
+
+/** Visão geral do negócio: soma de todos os projetos (a receber, atrasos, mês atual x anterior). */
+function VisaoGeral({ resumo: r }) {
+  const mes = MESES[new Date().getMonth()];
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div className="label" style={{ marginBottom: 8 }}>
+        Visão geral do negócio
+      </div>
+      <div className="grid cols-4">
+        <ResumoCard
+          label="A receber (todos)"
+          value={formatMoney(r.aReceber)}
+          detail={r.projetosComSaldo ? `em ${r.projetosComSaldo} projeto${r.projetosComSaldo > 1 ? 's' : ''}` : 'tudo recebido'}
+        />
+        <ResumoCard
+          label="Faturas atrasadas"
+          value={formatMoney(r.faturasAtrasadas)}
+          tone={r.qtdFaturasAtrasadas ? 'negative' : 'positive'}
+          detail={
+            r.qtdFaturasAtrasadas
+              ? `${r.qtdFaturasAtrasadas} fatura${r.qtdFaturasAtrasadas > 1 ? 's' : ''} vencida${r.qtdFaturasAtrasadas > 1 ? 's' : ''}`
+              : 'nenhuma em atraso'
+          }
+        />
+        <ResumoCard
+          label={`Recebido em ${mes}`}
+          value={formatMoney(r.recebidoMes)}
+          tone="positive"
+          detail={`gastos: ${formatMoney(r.gastoMes)} · mês passado: ${formatMoney(r.recebidoMesAnterior)}`}
+        />
+        <ResumoCard
+          label={`Horas em ${mes}`}
+          value={formatHoras(r.horasMes)}
+          detail={`mês passado: ${formatHoras(r.horasMesAnterior)}`}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
@@ -32,6 +94,7 @@ export default function Home() {
   const [projects, setProjects] = useState([]);
   const [financeiro, setFinanceiro] = useState({});
   const [atrasadas, setAtrasadas] = useState({});
+  const [resumo, setResumo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -77,8 +140,10 @@ export default function Home() {
         listFaturasEmAberto().catch(() => [])
       ]);
       setProjects(projs);
-      setFinanceiro(financeiroPorProjeto(projs, entries, hours));
+      const fin = financeiroPorProjeto(projs, entries, hours);
+      setFinanceiro(fin);
       const hoje = todayLocal();
+      setResumo(resumoNegocio({ entries, hours, faturasAbertas, financeiro: fin, mes: hoje.slice(0, 7), hoje }));
       const porProjeto = {};
       for (const f of faturasAbertas) {
         if (f.vencimento >= hoje) continue;
@@ -167,6 +232,8 @@ export default function Home() {
       </div>
 
       {error && <p className="error-text">{error}</p>}
+
+      {resumo && projects.length > 0 && <VisaoGeral resumo={resumo} />}
 
       {showForm && (
         <form className="panel" onSubmit={handleCreate} style={{ marginBottom: 20 }}>

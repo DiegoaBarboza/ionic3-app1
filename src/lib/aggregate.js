@@ -64,6 +64,57 @@ export function financeiroPorProjeto(projects, entries, hours) {
   return result;
 }
 
+function mesAnterior(mes) {
+  const [y, m] = mes.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+}
+
+/**
+ * Visão geral do negócio (topo do Início): soma de todos os projetos.
+ * `mes` no formato YYYY-MM (mês atual, no fuso local).
+ */
+export function resumoNegocio({ entries, hours, faturasAbertas, financeiro, mes, hoje }) {
+  const anterior = mesAnterior(mes);
+  const r = {
+    aReceber: 0,
+    projetosComSaldo: 0,
+    faturasAtrasadas: 0,
+    qtdFaturasAtrasadas: 0,
+    recebidoMes: 0,
+    recebidoMesAnterior: 0,
+    gastoMes: 0,
+    horasMes: 0,
+    horasMesAnterior: 0
+  };
+  for (const f of Object.values(financeiro)) {
+    r.aReceber += f.aReceber;
+    if (f.aReceber > 0) r.projetosComSaldo++;
+  }
+  for (const f of faturasAbertas) {
+    if (f.vencimento < hoje) {
+      r.faturasAtrasadas += Number(f.valor) || 0;
+      r.qtdFaturasAtrasadas++;
+    }
+  }
+  for (const e of entries) {
+    const m = e.date?.slice(0, 7);
+    const v = Number(e.amount) || 0;
+    if (e.type === 'receita') {
+      if (m === mes) r.recebidoMes += v;
+      else if (m === anterior) r.recebidoMesAnterior += v;
+    } else if (m === mes) r.gastoMes += v;
+  }
+  for (const h of hours) {
+    const m = h.date?.slice(0, 7);
+    const v = Number(h.hours) || 0;
+    if (m === mes) r.horasMes += v;
+    else if (m === anterior) r.horasMesAnterior += v;
+  }
+  r.horasMes = Math.round(r.horasMes * 100) / 100;
+  r.horasMesAnterior = Math.round(r.horasMesAnterior * 100) / 100;
+  return r;
+}
+
 export function pieDataByCategory(entries) {
   const totals = {};
   for (const e of entries) {
