@@ -15,7 +15,8 @@ function slugify(text) {
  * chama já busca esses dados antes, porque não vêm do ProjectContext.
  * `faturas` vale pra qualquer tipo de projeto.
  */
-export function downloadProjectBackup(project, entries, hours, extra = {}) {
+/** Monta o conteúdo do backup (objeto puro, sem baixar nada) — separado pra poder ser testado. */
+export function buildBackupPayload(project, entries, hours, extra = {}) {
   const { stages = [], stageTeam = [], encomendas = [], pecas = [], faturas = [], checklistItens = [], checklistAtas = [] } = extra;
   const entryIndexById = Object.fromEntries(entries.map((e, i) => [e.id, i]));
 
@@ -143,6 +144,11 @@ export function downloadProjectBackup(project, entries, hours, extra = {}) {
     }))
   };
 
+  return payload;
+}
+
+export function downloadProjectBackup(project, entries, hours, extra = {}) {
+  const payload = buildBackupPayload(project, entries, hours, extra);
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -6,9 +6,11 @@
   "description": "Controle Financeiro Zênite — gestão financeira e de horas de projetos de automação/robótica industrial",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vitest run && vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "build:sem-testes": "vite build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
@@ -25,6 +27,7 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "vite": "^5.4.6",
     "vite-plugin-pwa": "^0.20.5",
+    "vitest": "^2.1.9",
     "workbox-core": "^7.1.0",
     "workbox-precaching": "^7.1.0",
     "workbox-routing": "^7.1.0"
