@@ -11,6 +11,7 @@ import { formatMoney, todayLocal } from '../lib/calc.js';
 import { financeiroPorProjeto, resumoNegocio } from '../lib/aggregate.js';
 import { getPushStatus, pushSupported, subscribeToPush, unsubscribeFromPush } from '../lib/push.js';
 import MoneyInput from '../components/MoneyInput.jsx';
+import { EVENTO_SINCRONIZADO, ehErroDeRede, estaOffline, guardarCache, lerCache } from '../lib/offline.js';
 
 const emptyForm = {
   name: '',
@@ -106,6 +107,7 @@ export default function Home() {
   const [financeiro, setFinanceiro] = useState({});
   const [atrasadas, setAtrasadas] = useState({});
   const [resumo, setResumo] = useState(null);
+  const [offlineDesde, setOfflineDesde] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -135,6 +137,11 @@ export default function Home() {
   const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
+    window.addEventListener(EVENTO_SINCRONIZADO, refresh);
+    return () => window.removeEventListener(EVENTO_SINCRONIZADO, refresh);
+  });
+
+  useEffect(() => {
     refresh();
     if (pushSupported()) getPushStatus().then(setPushStatus);
   }, []);
@@ -162,13 +169,25 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
-      const [projs, entries, hours, faturasAbertas] = await Promise.all([
-        listProjects(),
-        listAllEntriesFinanceiro(),
-        listAllHoursFinanceiro(),
-        // se a consulta de faturas falhar, a tela continua funcionando
-        listFaturasEmAberto().catch(() => [])
-      ]);
+      let projs, entries, hours, faturasAbertas;
+      const cacheRapido = estaOffline() ? lerCache('inicio') : null;
+      try {
+        if (cacheRapido) throw new Error('offline');
+        [projs, entries, hours, faturasAbertas] = await Promise.all([
+          listProjects(),
+          listAllEntriesFinanceiro(),
+          listAllHoursFinanceiro(),
+          // se a consulta de faturas falhar, a tela continua funcionando
+          listFaturasEmAberto().catch(() => [])
+        ]);
+        guardarCache('inicio', { projs, entries, hours, faturasAbertas });
+        setOfflineDesde(null);
+      } catch (err) {
+        const cache = ehErroDeRede(err) ? lerCache('inicio') : null;
+        if (!cache) throw err;
+        ({ projs, entries, hours, faturasAbertas } = cache.dados);
+        setOfflineDesde(cache.em);
+      }
       setProjects(projs);
       const fin = financeiroPorProjeto(projs, entries, hours);
       setFinanceiro(fin);
@@ -262,6 +281,12 @@ export default function Home() {
       </div>
 
       {error && <p className="error-text">{error}</p>}
+      {offlineDesde && (
+        <p className="muted" style={{ marginBottom: 12, fontSize: 13 }}>
+          📴 Sem internet — mostrando os dados salvos neste aparelho em{' '}
+          {new Date(offlineDesde).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.
+        </p>
+      )}
 
       {resumo && projects.length > 0 && <VisaoGeral resumo={resumo} />}
 

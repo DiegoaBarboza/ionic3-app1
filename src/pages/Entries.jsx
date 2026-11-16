@@ -6,6 +6,7 @@ import ReceiptCapture from '../components/ReceiptCapture.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
 import { openReceipt, removeReceipts } from '../lib/receipts.js';
 import { exportarLancamentos } from '../lib/exportExcel.js';
+import { criarOuEnfileirar, descartar, estaOffline } from '../lib/offline.js';
 
 const emptyForm = () => ({
   type: 'gasto',
@@ -25,6 +26,7 @@ export default function Entries() {
   const [filter, setFilter] = useState('todos');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [aviso, setAviso] = useState('');
   const [expInicio, setExpInicio] = useState('');
   const [expFim, setExpFim] = useState('');
   const [exportando, setExportando] = useState(false);
@@ -112,12 +114,19 @@ export default function Entries() {
         // trocou a foto (ou virou receita): apaga a foto antiga
         if (anterior && anterior !== payload.receipt_url) removeReceipts([anterior]);
       } else {
-        await createEntry(project.id, payload);
+        const criado = await criarOuEnfileirar('entries', project.id, payload, () => createEntry(project.id, payload));
+        setAviso(
+          criado._pendente
+            ? '📴 Sem internet: o lançamento ficou guardado neste aparelho e será enviado sozinho quando o sinal voltar.'
+            : ''
+        );
       }
       resetForm();
       await reloadProject();
     } catch (err) {
-      setError(err.message);
+      setError(
+        estaOffline() && editingId ? 'Sem internet: editar um lançamento já enviado só funciona com sinal.' : err.message
+      );
     } finally {
       setSaving(false);
     }
@@ -126,9 +135,13 @@ export default function Entries() {
   async function handleDelete(id) {
     if (!confirm('Excluir este lançamento?')) return;
     const foto = entries.find((x) => x.id === id)?.receipt_url;
-    await deleteEntry(id);
-    if (foto) removeReceipts([foto]);
-    await reloadProject();
+    try {
+      await deleteEntry(id);
+      if (foto) removeReceipts([foto]);
+      await reloadProject();
+    } catch (err) {
+      setError(estaOffline() ? 'Sem internet: excluir um lançamento já enviado só funciona com sinal.' : err.message);
+    }
   }
 
   return (
@@ -202,6 +215,7 @@ export default function Entries() {
         </div>
 
         {error && <p className="error-text">{error}</p>}
+        {aviso && <p style={{ color: 'var(--accent)', fontWeight: 600, marginBottom: 8 }}>{aviso}</p>}
 
         <div className="btn-row">
           <button type="submit" className="primary" disabled={saving}>
@@ -251,7 +265,11 @@ export default function Entries() {
         {filtered.map((entry) => {
           const cat = entry.type === 'gasto' ? categoryInfo(entry.category) : revenueCategoryInfo(entry.category);
           return (
-            <div className="list-row" key={entry.id}>
+            <div
+              className="list-row"
+              key={entry.id}
+              style={entry._pendente ? { background: 'rgba(10, 126, 164, 0.06)' } : undefined}
+            >
               <div style={{ minWidth: 0 }}>
                 <div>
                   {cat && (
@@ -260,6 +278,11 @@ export default function Entries() {
                     </span>
                   )}
                   <span className="muted">{formatDate(entry.date)}</span>
+                  {entry._pendente && (
+                    <span style={{ fontSize: 12, marginLeft: 8, fontWeight: 600, color: entry._erro ? 'var(--negative)' : 'var(--accent)' }}>
+                      {entry._erro ? '⚠️ não enviado' : '⏳ aguardando envio'}
+                    </span>
+                  )}
                   {(entry.city || entry.state) && (
                     <span className="muted"> · {[entry.city, entry.state].filter(Boolean).join('/')}</span>
                   )}
@@ -281,12 +304,27 @@ export default function Entries() {
                     📎 Nota
                   </button>
                 )}
-                <button className="ghost" onClick={() => startEdit(entry)}>
-                  Editar
-                </button>
-                <button className="ghost danger" onClick={() => handleDelete(entry.id)}>
-                  Excluir
-                </button>
+                {entry._pendente ? (
+                  <button
+                    className="ghost danger"
+                    title={entry._erro || 'Ainda não foi enviado'}
+                    onClick={() => {
+                      if (confirm('Descartar este lançamento que ainda não foi enviado? Ele some deste aparelho.'))
+                        descartar(entry.id);
+                    }}
+                  >
+                    Descartar
+                  </button>
+                ) : (
+                  <>
+                    <button className="ghost" onClick={() => startEdit(entry)}>
+                      Editar
+                    </button>
+                    <button className="ghost danger" onClick={() => handleDelete(entry.id)}>
+                      Excluir
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           );

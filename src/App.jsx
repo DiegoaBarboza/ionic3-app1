@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import StatusConexao from './components/StatusConexao.jsx';
+import { useAuth } from './context/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Home from './pages/Home.jsx';
@@ -15,8 +17,12 @@ import Anexos from './pages/Anexos.jsx';
 import Checklist from './pages/Checklist.jsx';
 
 export default function App() {
+  const { session } = useAuth();
   return (
-    <Routes>
+    <>
+      {/* só com login: a fila offline precisa da sessão pra gravar no banco */}
+      {session && <StatusConexao />}
+      <Routes>
       <Route path="/login" element={<Login />} />
 
       <Route element={<ProtectedRoute />}>
@@ -38,6 +44,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

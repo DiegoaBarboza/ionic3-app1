@@ -22,7 +22,7 @@ const BASE_TABS = [
 ];
 
 function LayoutInner() {
-  const { project, entries, hours, loading, error, reloadProject } = useProject();
+  const { project, entries, hours, loading, error, reloadProject, offlineDesde } = useProject();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -60,7 +60,13 @@ function LayoutInner() {
         if (e1 || e2) throw e1 || e2;
         extra = { ...extra, stages, stageTeam, encomendas, pecas, checklistItens, checklistAtas };
       }
-      downloadProjectBackup(project, entries, hours, extra);
+      // lançamentos ainda na fila (sem internet) não vão no backup: ainda não existem no servidor
+      downloadProjectBackup(
+        project,
+        entries.filter((e) => !e._pendente),
+        hours.filter((h) => !h._pendente),
+        extra
+      );
     } catch (err) {
       setRestoreError('Não foi possível gerar o backup: ' + err.message);
     } finally {
@@ -185,6 +191,12 @@ function LayoutInner() {
           ))}
         </div>
         <div className="content">
+          {offlineDesde && (
+            <p className="muted" style={{ marginBottom: 10, fontSize: 13 }}>
+              📴 Sem internet — mostrando os dados salvos neste aparelho em{' '}
+              {new Date(offlineDesde).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.
+            </p>
+          )}
           {restoreError && <p className="error-text">{restoreError}</p>}
           {error && <p className="error-text">Erro ao carregar projeto: {error}</p>}
           {!error && loading && <p className="muted">Carregando dados do projeto…</p>}

@@ -20,6 +20,7 @@ import { ensureStagesSeeded, stageColor } from '../data/stages.js';
 import StatCard from '../components/StatCard.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
 import JornadaRapida from '../components/JornadaRapida.jsx';
+import { criarOuEnfileirar, descartar, estaOffline } from '../lib/offline.js';
 import { exportarHoras } from '../lib/exportExcel.js';
 
 const emptyForm = (almocoPadrao = 60) => ({
@@ -55,6 +56,7 @@ export default function Hours() {
   const [exportando, setExportando] = useState(false);
   const formRef = useRef(null);
   const [preenchido, setPreenchido] = useState(false);
+  const [aviso, setAviso] = useState('');
 
   /** Recebe os campos do cronômetro / "repetir última jornada" e leva o usuário pro formulário. */
   function fillFromShortcut(fields) {
@@ -130,7 +132,8 @@ export default function Hours() {
     setError('');
     try {
       let description = form.description?.trim() || null;
-      if (description) {
+      // sem sinal não dá pra revisar o texto: salva como escrito
+      if (description && !estaOffline()) {
         setPhase('revisando');
         description = await correctText(description);
       }
@@ -149,18 +152,29 @@ export default function Hours() {
         pedagio: Number(form.pedagio) || 0,
         stage_id: isMaquina ? form.stage_id || null : null
       };
+      let ficouNaFila = false;
       if (editingId) {
         await updateHours(editingId, payload);
       } else {
-        await createHours(project.id, payload);
+        const criado = await criarOuEnfileirar('hours', project.id, payload, () => createHours(project.id, payload));
+        ficouNaFila = !!criado._pendente;
       }
       setEditingId(null);
       setForm(novoForm());
       setPreenchido(false);
+      setAviso(
+        ficouNaFila
+          ? '📴 Sem internet: a jornada ficou guardada neste aparelho e será enviada sozinha quando o sinal voltar.'
+          : ''
+      );
       await reloadProject();
-      if (project.tipo_projeto === 'servico') triggerServiceReportAgent();
+      if (!ficouNaFila && project.tipo_projeto === 'servico') triggerServiceReportAgent();
     } catch (err) {
-      setError(err.message);
+      setError(
+        estaOffline() && editingId
+          ? 'Sem internet: editar ou excluir uma jornada já enviada só funciona com sinal.'
+          : err.message
+      );
     } finally {
       setSaving(false);
       setPhase('idle');
@@ -185,8 +199,12 @@ export default function Hours() {
 
   async function handleDelete(id) {
     if (!confirm('Excluir esta jornada?')) return;
-    await deleteHours(id);
-    await reloadProject();
+    try {
+      await deleteHours(id);
+      await reloadProject();
+    } catch (err) {
+      setError(estaOffline() ? 'Sem internet: excluir uma jornada já enviada só funciona com sinal.' : err.message);
+    }
   }
 
   function handlePrint() {
@@ -415,6 +433,7 @@ export default function Hours() {
           <span className="mono">{formatMoney(reembolsoPreview)}</span>
         </p>
         {error && <p className="error-text">{error}</p>}
+        {aviso && <p style={{ color: 'var(--accent)', fontWeight: 600, marginBottom: 8 }}>{aviso}</p>}
         <div className="btn-row">
           <button type="submit" className="primary" disabled={saving}>
             {phase === 'revisando'
@@ -483,8 +502,15 @@ export default function Hours() {
             </thead>
             <tbody>
               {hours.map((h) => (
-                <tr key={h.id}>
-                  <td style={{ whiteSpace: 'nowrap' }}>{formatDateShort(h.date)}</td>
+                <tr key={h.id} style={h._pendente ? { background: 'rgba(10, 126, 164, 0.06)' } : undefined}>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {formatDateShort(h.date)}
+                    {h._pendente && (
+                      <div style={{ fontSize: 11, color: h._erro ? 'var(--negative)' : 'var(--accent)', fontWeight: 600 }}>
+                        {h._erro ? '⚠️ não enviada' : '⏳ aguardando envio'}
+                      </div>
+                    )}
+                  </td>
                   <td className="mono" style={{ whiteSpace: 'nowrap' }}>
                     {h.hours}h
                   </td>
@@ -497,12 +523,26 @@ export default function Hours() {
                     {calcReembolso(h) > 0 ? formatMoney(calcReembolso(h)) : '—'}
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="ghost" onClick={() => startEdit(h)}>
-                      Editar
-                    </button>
-                    <button className="ghost danger" onClick={() => handleDelete(h.id)}>
-                      Excluir
-                    </button>
+                    {h._pendente ? (
+                      <button
+                        className="ghost danger"
+                        title={h._erro || 'Ainda não foi enviada'}
+                        onClick={() => {
+                          if (confirm('Descartar esta jornada que ainda não foi enviada? Ela some deste aparelho.')) descartar(h.id);
+                        }}
+                      >
+                        Descartar
+                      </button>
+                    ) : (
+                      <>
+                        <button className="ghost" onClick={() => startEdit(h)}>
+                          Editar
+                        </button>
+                        <button className="ghost danger" onClick={() => handleDelete(h.id)}>
+                          Excluir
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
