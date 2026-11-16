@@ -7,6 +7,7 @@ import MoneyInput from '../components/MoneyInput.jsx';
 import { openReceipt, removeReceipts } from '../lib/receipts.js';
 import { exportarLancamentos } from '../lib/exportExcel.js';
 import { criarOuEnfileirar, descartar, estaOffline } from '../lib/offline.js';
+import { avisar, confirmar } from '../lib/dialogo.js';
 
 const emptyForm = () => ({
   type: 'gasto',
@@ -133,7 +134,7 @@ export default function Entries() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Excluir este lançamento?')) return;
+    if (!(await confirmar({ titulo: 'Excluir este lançamento?', mensagem: 'A foto da nota, se tiver, também é apagada.', confirmar: 'Excluir', cancelar: 'Manter', perigo: true }))) return;
     const foto = entries.find((x) => x.id === id)?.receipt_url;
     try {
       await deleteEntry(id);
@@ -297,7 +298,7 @@ export default function Entries() {
                   <button
                     className="ghost"
                     onClick={() =>
-                      openReceipt(entry.receipt_url).catch((err) => alert('Não foi possível abrir a nota: ' + err.message))
+                      openReceipt(entry.receipt_url).catch((err) => avisar({ titulo: 'Não foi possível abrir a nota', mensagem: err.message }))
                     }
                     title="Ver foto da nota fiscal"
                   >
@@ -308,9 +309,15 @@ export default function Entries() {
                   <button
                     className="ghost danger"
                     title={entry._erro || 'Ainda não foi enviado'}
-                    onClick={() => {
-                      if (confirm('Descartar este lançamento que ainda não foi enviado? Ele some deste aparelho.'))
-                        descartar(entry.id);
+                    onClick={async () => {
+                      const ok = await confirmar({
+                        titulo: 'Descartar este lançamento?',
+                        mensagem: 'Ele ainda não foi enviado e some deste aparelho.',
+                        confirmar: 'Descartar',
+                        cancelar: 'Manter',
+                        perigo: true
+                      });
+                      if (ok) descartar(entry.id);
                     }}
                   >
                     Descartar

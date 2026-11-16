@@ -8,6 +8,7 @@ import {
 } from '../data/fornecedores.js';
 import { createPessoa, deletePessoa, listPessoas, updatePessoa } from '../data/pessoas.js';
 import { supabase } from '../lib/supabaseClient.js';
+import { avisar, confirmar } from '../lib/dialogo.js';
 
 const emptyFornecedor = { nome: '', especialidade: '', contato: '', observacoes: '' };
 const emptyPessoa = { nome: '', especialidade: '', contato: '', observacoes: '' };
@@ -142,12 +143,13 @@ export default function Cadastros() {
         .eq('fornecedor_id', f.id);
       if (countErr) throw countErr;
       if (count > 0) {
-        alert(
-          `"${f.nome}" não pode ser excluído: está vinculado a ${count} encomenda${count > 1 ? 's' : ''} de Compras & Usinagem Externa. Desvincule ou exclua essas encomendas primeiro.`
-        );
+        await avisar({
+          titulo: `Não dá pra excluir "${f.nome}"`,
+          mensagem: `Está vinculado a ${count} encomenda${count > 1 ? 's' : ''} de Compras & Usinagem Externa. Desvincule ou exclua essas encomendas primeiro.`
+        });
         return;
       }
-      if (!confirm(`Excluir o fornecedor "${f.nome}"?`)) return;
+      if (!(await confirmar({ titulo: `Excluir o fornecedor "${f.nome}"?`, mensagem: 'Peças da lista que usam este fornecedor ficam sem fornecedor.', confirmar: 'Excluir', cancelar: 'Manter', perigo: true }))) return;
       await deleteFornecedor(f.id);
       await refresh();
     } catch (err) {
@@ -167,7 +169,7 @@ export default function Cadastros() {
         count > 0
           ? `"${p.nome}" está atribuído em ${count} etapa${count > 1 ? 's' : ''} de Construção de Máquinas — excluir remove essas atribuições também, sem como desfazer. `
           : '';
-      if (!confirm(`${aviso}Excluir "${p.nome}" do cadastro?`)) return;
+      if (!(await confirmar({ titulo: `Excluir "${p.nome}" do cadastro?`, mensagem: aviso || undefined, confirmar: 'Excluir', cancelar: 'Manter', perigo: true }))) return;
       await deletePessoa(p.id);
       await refresh();
     } catch (err) {

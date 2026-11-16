@@ -13,6 +13,7 @@ import {
 import { formatDate, formatMoney, todayLocal } from '../lib/calc.js';
 import MoneyInput from '../components/MoneyInput.jsx';
 import StatCard from '../components/StatCard.jsx';
+import { confirmar, escolher } from '../lib/dialogo.js';
 
 const emptyForm = () => ({
   descricao: '',
@@ -148,12 +149,14 @@ export default function Faturas() {
   }
 
   async function handleDesmarcar(f) {
-    if (
-      !confirm(
-        'Voltar esta fatura para "em aberto"?\n\nO lançamento de Pagamento criado para ela também será excluído, e o valor volta para o "a receber".'
-      )
-    )
-      return;
+    const ok = await confirmar({
+      titulo: 'Desfazer o pagamento desta fatura?',
+      mensagem: 'Ela volta para "em aberto", o lançamento de Pagamento criado pra ela é excluído e o valor volta pro "a receber".',
+      confirmar: 'Desfazer pagamento',
+      cancelar: 'Manter paga',
+      perigo: true
+    });
+    if (!ok) return;
     setBusyId(f.id);
     setError('');
     try {
@@ -169,11 +172,25 @@ export default function Faturas() {
   async function handleDelete(f) {
     let apagarPagamento = false;
     if (f.entry_id) {
-      if (!confirm('Excluir esta fatura?')) return;
-      apagarPagamento = confirm(
-        'Essa fatura já está paga e gerou um lançamento de Pagamento.\n\nOK = excluir o pagamento também\nCancelar = manter o pagamento em Lançamentos'
-      );
-    } else if (!confirm('Excluir esta fatura?')) return;
+      const escolha = await escolher({
+        titulo: `Excluir a fatura "${f.descricao}"?`,
+        mensagem: 'Ela já está paga e gerou um lançamento de Pagamento em Lançamentos.',
+        opcoes: [
+          { valor: 'manter', label: 'Excluir só a fatura (manter o pagamento)' },
+          { valor: 'tudo', label: 'Excluir a fatura e o pagamento', perigo: true }
+        ]
+      });
+      if (!escolha) return;
+      apagarPagamento = escolha === 'tudo';
+    } else {
+      const ok = await confirmar({
+        titulo: `Excluir a fatura "${f.descricao}"?`,
+        confirmar: 'Excluir',
+        cancelar: 'Manter',
+        perigo: true
+      });
+      if (!ok) return;
+    }
     setBusyId(f.id);
     setError('');
     try {

@@ -11,6 +11,7 @@ import {
   updateAnexo,
   uploadAnexo
 } from '../data/anexos.js';
+import { confirmar } from '../lib/dialogo.js';
 
 function dataCurta(ts) {
   return new Date(ts).toLocaleDateString('pt-BR');
@@ -83,7 +84,7 @@ export default function Anexos() {
   }
 
   async function handleDelete(a) {
-    if (!confirm(`Excluir "${a.nome}"? O arquivo é apagado de vez.`)) return;
+    if (!(await confirmar({ titulo: `Excluir "${a.nome}"?`, mensagem: 'O arquivo é apagado de vez.', confirmar: 'Excluir', cancelar: 'Manter', perigo: true }))) return;
     setErro('');
     try {
       await deleteAnexo(a);

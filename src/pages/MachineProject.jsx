@@ -23,6 +23,7 @@ import {
 import { PECA_STATUS, createPeca, custoPeca, deletePeca, listPecas, pecaStatusInfo, resumoBom, updatePeca } from '../data/pecas.js';
 import MoneyInput from '../components/MoneyInput.jsx';
 import { formatDate, formatMoney, todayLocal } from '../lib/calc.js';
+import { confirmar } from '../lib/dialogo.js';
 
 const emptyEncomenda = {
   descricao: '',
@@ -373,7 +374,7 @@ export default function MachineProject() {
   }
 
   async function handleDeleteEncomenda(id) {
-    if (!confirm('Excluir esta encomenda?')) return;
+    if (!(await confirmar({ titulo: 'Excluir esta encomenda?', mensagem: 'Peças vinculadas a ela ficam sem encomenda.', confirmar: 'Excluir', cancelar: 'Manter', perigo: true }))) return;
     await deleteEncomenda(id);
     await reloadEncomendas();
   }
@@ -454,7 +455,7 @@ export default function MachineProject() {
   const bom = resumoBom(pecas);
 
   async function handleDeletePeca(id) {
-    if (!confirm('Excluir esta peça da lista?')) return;
+    if (!(await confirmar({ titulo: 'Excluir esta peça da lista?', confirmar: 'Excluir', cancelar: 'Manter', perigo: true }))) return;
     await deletePeca(id);
     await reloadPecas();
   }

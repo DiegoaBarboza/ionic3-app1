@@ -3,6 +3,7 @@ import { useProject } from '../context/ProjectContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { getProject, updateProject } from '../data/projects.js';
 import { formatDate } from '../lib/calc.js';
+import { escolher } from '../lib/dialogo.js';
 
 const SAVE_DEBOUNCE_MS = 700;
 
@@ -123,11 +124,19 @@ export default function ServiceProject() {
   async function handleAnalyzeNow() {
     const temTexto =
       draft.relatorio_pendencias || draft.relatorio_sugestoes || draft.relatorio_dificuldades || draft.motivo_atraso;
-    const force = temTexto
-      ? confirm(
-          'Já tem texto no relatório.\n\nOK = substituir tudo pela análise da IA\nCancelar = manter o que você escreveu e só preencher o que estiver vazio'
-        )
-      : false;
+    let force = false;
+    if (temTexto) {
+      const escolha = await escolher({
+        titulo: 'O relatório já tem texto',
+        mensagem: 'O que a IA deve fazer com os campos já preenchidos?',
+        opcoes: [
+          { valor: 'vazio', label: 'Manter o que escrevi e preencher só o vazio' },
+          { valor: 'tudo', label: 'Substituir tudo pela análise da IA', perigo: true }
+        ]
+      });
+      if (!escolha) return;
+      force = escolha === 'tudo';
+    }
     setAnalyzing(true);
     setAnalyzeMsg('');
     try {

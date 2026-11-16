@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { updateProject } from '../data/projects.js';
 import { almocoMinutos, todayLocal } from '../lib/calc.js';
+import { confirmar } from '../lib/dialogo.js';
 
 function hhmm(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -77,7 +78,14 @@ export default function JornadaRapida({ project, hours, setProject, onFill }) {
   }
 
   async function descartar() {
-    if (!confirm('Descartar o cronômetro em andamento? Nada será lançado.')) return;
+    const ok = await confirmar({
+      titulo: 'Descartar o cronômetro?',
+      mensagem: 'A jornada em andamento não será lançada.',
+      confirmar: 'Descartar',
+      cancelar: 'Continuar contando',
+      perigo: true
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await salvarInicio(null);

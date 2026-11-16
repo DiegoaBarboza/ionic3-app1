@@ -581,3 +581,93 @@ th {
   border-radius: 8px;
   border: 1px solid var(--border);
 }
+
+/* ---------- janelas de confirmação (lib/dialogo.js) ---------- */
+
+.dialogo-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(15, 30, 45, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: dialogo-fade 0.12s ease-out;
+}
+
+.dialogo {
+  width: 100%;
+  max-width: 440px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 60px -20px rgba(15, 30, 45, 0.55);
+  padding: 20px;
+  animation: dialogo-sobe 0.16s ease-out;
+}
+
+.dialogo-titulo {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.dialogo-mensagem {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  margin-bottom: 12px;
+}
+
+.dialogo-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dialogo-botoes button {
+  flex: 1 1 auto;
+}
+
+button.danger-solid {
+  background: var(--negative);
+  border-color: var(--negative);
+  color: #fff;
+  font-weight: 600;
+}
+
+button.danger-solid:hover {
+  filter: brightness(0.92);
+}
+
+/* no celular a janela sobe do rodapé, com botões grandes */
+@media (max-width: 560px) {
+  .dialogo-fundo {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .dialogo {
+    max-width: none;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .dialogo-botoes {
+    flex-direction: column;
+  }
+  .dialogo-botoes button {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+}
+
+@keyframes dialogo-fade {
+  from { opacity: 0; }
+}
+@keyframes dialogo-sobe {
+  from { transform: translateY(12px); opacity: 0; }
+}

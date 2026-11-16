@@ -14,6 +14,7 @@ import {
   updateItem
 } from '../data/checklists.js';
 import { buildChecklistAtaHtml } from '../lib/report.js';
+import { confirmar } from '../lib/dialogo.js';
 
 const ATA_VAZIA = {
   data_teste: '',
@@ -134,7 +135,7 @@ export default function Checklist() {
   }
 
   async function handleDelete(it) {
-    if (!confirm(`Remover o item "${it.item}" do checklist?`)) return;
+    if (!(await confirmar({ titulo: `Remover "${it.item}" do checklist?`, confirmar: 'Remover', cancelar: 'Manter', perigo: true }))) return;
     try {
       await deleteItem(it.id);
       setItens((lista) => lista.filter((x) => x.id !== it.id));

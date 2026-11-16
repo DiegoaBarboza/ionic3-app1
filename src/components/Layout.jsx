@@ -11,6 +11,7 @@ import { listEncomendas } from '../data/encomendas.js';
 import { listPecas } from '../data/pecas.js';
 import { listFaturas } from '../data/faturas.js';
 import { supabase } from '../lib/supabaseClient.js';
+import { confirmar, pedirTexto } from '../lib/dialogo.js';
 
 const BASE_TABS = [
   { to: 'dashboard', label: 'Dashboard' },
@@ -75,14 +76,15 @@ function LayoutInner() {
   }
 
   async function handleDeleteProject() {
-    const typed = prompt(
-      `Isso vai excluir PERMANENTEMENTE o projeto "${project.name}" e todos os lançamentos, horas, etapas, equipe, encomendas e peças dele — não tem como desfazer.\n\nSe quiser guardar uma cópia antes, cancele e use "Backup do projeto" primeiro (os arquivos da aba Anexos não vão no backup — baixe os que precisar).\n\nPra confirmar a exclusão, digite o nome do projeto exatamente:`
-    );
+    const typed = await pedirTexto({
+      titulo: `Excluir o projeto "${project.name}"?`,
+      mensagem:
+        'Apaga PARA SEMPRE o projeto e tudo dele: lançamentos, horas, faturas, etapas, equipe, encomendas, peças, checklist e anexos. Não tem como desfazer.\n\nSe quiser uma cópia, cancele e use "Backup do projeto" antes (os arquivos da aba Anexos não vão no backup — baixe os que precisar).\n\nPra confirmar, digite o nome do projeto:',
+      esperado: project.name,
+      confirmar: 'Excluir projeto',
+      perigo: true
+    });
     if (typed === null) return;
-    if (typed.trim() !== project.name) {
-      alert('Nome não confere — nada foi excluído.');
-      return;
-    }
     setDeleting(true);
     setRestoreError('');
     try {
@@ -98,9 +100,14 @@ function LayoutInner() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!confirm('Isso vai substituir todos os lançamentos e horas deste projeto pelos dados do arquivo. Continuar?')) {
-      return;
-    }
+    const ok = await confirmar({
+      titulo: 'Restaurar backup por cima deste projeto?',
+      mensagem: 'Os lançamentos, horas, faturas, etapas, encomendas, peças e checklist atuais serão substituídos pelos do arquivo. Os anexos não mudam.',
+      confirmar: 'Substituir pelos dados do arquivo',
+      cancelar: 'Manter como está',
+      perigo: true
+    });
+    if (!ok) return;
     setRestoring(true);
     setRestoreError('');
     try {

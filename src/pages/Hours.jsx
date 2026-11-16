@@ -22,6 +22,7 @@ import MoneyInput from '../components/MoneyInput.jsx';
 import JornadaRapida from '../components/JornadaRapida.jsx';
 import { criarOuEnfileirar, descartar, estaOffline } from '../lib/offline.js';
 import { exportarHoras } from '../lib/exportExcel.js';
+import { confirmar } from '../lib/dialogo.js';
 
 const emptyForm = (almocoPadrao = 60) => ({
   date: todayLocal(),
@@ -126,7 +127,13 @@ export default function Hours() {
       const motivo = viraNoite
         ? `O fim (${form.end_time}) é antes do início (${form.start_time}), então a jornada foi contada virando a noite: ${preview}h.`
         : `A jornada deu ${preview}h.`;
-      if (!confirm(`${motivo}\n\nEstá certo? OK = salvar assim · Cancelar = corrigir o horário`)) return;
+      const ok = await confirmar({
+        titulo: 'Confira o horário',
+        mensagem: motivo,
+        confirmar: 'Está certo, salvar',
+        cancelar: 'Corrigir horário'
+      });
+      if (!ok) return;
     }
     setSaving(true);
     setError('');
@@ -198,7 +205,7 @@ export default function Hours() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Excluir esta jornada?')) return;
+    if (!(await confirmar({ titulo: 'Excluir esta jornada?', confirmar: 'Excluir', cancelar: 'Manter', perigo: true }))) return;
     try {
       await deleteHours(id);
       await reloadProject();
@@ -527,8 +534,15 @@ export default function Hours() {
                       <button
                         className="ghost danger"
                         title={h._erro || 'Ainda não foi enviada'}
-                        onClick={() => {
-                          if (confirm('Descartar esta jornada que ainda não foi enviada? Ela some deste aparelho.')) descartar(h.id);
+                        onClick={async () => {
+                          const ok = await confirmar({
+                            titulo: 'Descartar esta jornada?',
+                            mensagem: 'Ela ainda não foi enviada e some deste aparelho.',
+                            confirmar: 'Descartar',
+                            cancelar: 'Manter',
+                            perigo: true
+                          });
+                          if (ok) descartar(h.id);
                         }}
                       >
                         Descartar
