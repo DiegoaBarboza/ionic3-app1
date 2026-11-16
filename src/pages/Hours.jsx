@@ -3,7 +3,16 @@ import { useProject } from '../context/ProjectContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { updateProject } from '../data/projects.js';
 import { createHours, deleteHours, updateHours } from '../data/hours.js';
-import { calcHoras, calcReembolso, formatDateShort, formatMoney, todayLocal } from '../lib/calc.js';
+import {
+  OPCOES_ALMOCO,
+  almocoMinutos,
+  calcHoras,
+  calcReembolso,
+  formatAlmoco,
+  formatDateShort,
+  formatMoney,
+  todayLocal
+} from '../lib/calc.js';
 import { correctText } from '../lib/aiText.js';
 import { sumHours } from '../lib/aggregate.js';
 import { buildActivityReportHtml, buildHoursReportHtml } from '../lib/report.js';
@@ -13,11 +22,11 @@ import MoneyInput from '../components/MoneyInput.jsx';
 import JornadaRapida from '../components/JornadaRapida.jsx';
 import { exportarHoras } from '../lib/exportExcel.js';
 
-const emptyForm = () => ({
+const emptyForm = (almocoPadrao = 60) => ({
   date: todayLocal(),
   start_time: '08:00',
   end_time: '17:00',
-  lunch: true,
+  almoco_minutos: almocoPadrao,
   description: '',
   km_ida: '',
   km_volta: '',
@@ -29,7 +38,9 @@ const emptyForm = () => ({
 export default function Hours() {
   const { project, hours, setProject, reloadProject } = useProject();
   const isMaquina = project.tipo_projeto === 'maquina';
-  const [form, setForm] = useState(emptyForm);
+  const almocoPadrao = project.almoco_padrao_minutos ?? 60;
+  const novoForm = () => emptyForm(almocoPadrao);
+  const [form, setForm] = useState(novoForm);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -48,7 +59,7 @@ export default function Hours() {
   /** Recebe os campos do cronômetro / "repetir última jornada" e leva o usuário pro formulário. */
   function fillFromShortcut(fields) {
     setEditingId(null);
-    setForm({ ...emptyForm(), ...fields });
+    setForm({ ...novoForm(), ...fields });
     setPreenchido(true);
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
@@ -68,7 +79,7 @@ export default function Hours() {
     return stages.find((s) => s.id === stageId)?.stage_label || '—';
   }
 
-  const preview = calcHoras(form.start_time, form.end_time, form.lunch);
+  const preview = calcHoras(form.start_time, form.end_time, form.almoco_minutos);
   const viraNoite = !!form.start_time && !!form.end_time && form.end_time <= form.start_time;
   const jornadaLonga = preview > 14;
   const reembolsoPreview = calcReembolso(form);
@@ -88,6 +99,15 @@ export default function Hours() {
       // eslint-disable-next-line no-console
       console.error('Agente de relatório indisponível:', err);
     });
+  }
+
+  async function salvarAlmocoPadrao() {
+    try {
+      const updated = await updateProject(project.id, { almoco_padrao_minutos: Number(form.almoco_minutos) || 0 });
+      setProject(updated);
+    } catch (err) {
+      setError('Não foi possível salvar o padrão: ' + err.message);
+    }
   }
 
   async function saveContract() {
@@ -119,8 +139,9 @@ export default function Hours() {
         date: form.date,
         start_time: form.start_time,
         end_time: form.end_time,
-        lunch: form.lunch,
-        hours: calcHoras(form.start_time, form.end_time, form.lunch),
+        lunch: Number(form.almoco_minutos) > 0,
+        almoco_minutos: Number(form.almoco_minutos) || 0,
+        hours: calcHoras(form.start_time, form.end_time, form.almoco_minutos),
         description,
         km_ida: Number(form.km_ida) || 0,
         km_volta: Number(form.km_volta) || 0,
@@ -134,7 +155,7 @@ export default function Hours() {
         await createHours(project.id, payload);
       }
       setEditingId(null);
-      setForm(emptyForm());
+      setForm(novoForm());
       setPreenchido(false);
       await reloadProject();
       if (project.tipo_projeto === 'servico') triggerServiceReportAgent();
@@ -152,7 +173,7 @@ export default function Hours() {
       date: h.date,
       start_time: h.start_time,
       end_time: h.end_time,
-      lunch: h.lunch,
+      almoco_minutos: almocoMinutos(h),
       description: h.description || '',
       km_ida: h.km_ida || '',
       km_volta: h.km_volta || '',
@@ -295,16 +316,25 @@ export default function Hours() {
             <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
           </div>
           <div className="field">
-            <label>&nbsp;</label>
-            <div className="checkbox-row">
-              <input
-                type="checkbox"
-                id="lunch"
-                checked={form.lunch}
-                onChange={(e) => setForm({ ...form, lunch: e.target.checked })}
-              />
-              <label htmlFor="lunch">Teve almoço (-1h)</label>
-            </div>
+            <label>Almoço</label>
+            <select
+              value={form.almoco_minutos}
+              onChange={(e) => setForm({ ...form, almoco_minutos: Number(e.target.value) })}
+            >
+              {[...new Set([...OPCOES_ALMOCO, Number(form.almoco_minutos) || 0])]
+                .sort((a, b) => a - b)
+                .map((m) => (
+                  <option key={m} value={m}>
+                    {m === 0 ? 'Sem almoço' : formatAlmoco(m)}
+                    {m === almocoPadrao ? ' (padrão)' : ''}
+                  </option>
+                ))}
+            </select>
+            {Number(form.almoco_minutos) !== almocoPadrao && (
+              <button type="button" className="ghost" style={{ padding: '4px 0', fontSize: 12 }} onClick={salvarAlmocoPadrao}>
+                Usar {Number(form.almoco_minutos) ? formatAlmoco(form.almoco_minutos) : 'sem almoço'} como padrão deste projeto
+              </button>
+            )}
           </div>
         </div>
         <div className="form-row">
@@ -400,7 +430,7 @@ export default function Hours() {
               type="button"
               onClick={() => {
                 setEditingId(null);
-                setForm(emptyForm());
+                setForm(novoForm());
               }}
             >
               Cancelar edição
@@ -462,7 +492,7 @@ export default function Hours() {
                   {isMaquina && <td style={{ whiteSpace: 'nowrap' }}>{stageLabel(h.stage_id)}</td>}
                   <td style={{ whiteSpace: 'nowrap' }}>{h.start_time}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{h.end_time}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{h.lunch ? 'Sim' : 'Não'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{formatAlmoco(almocoMinutos(h))}</td>
                   <td className="mono" style={{ whiteSpace: 'nowrap' }}>
                     {calcReembolso(h) > 0 ? formatMoney(calcReembolso(h)) : '—'}
                   </td>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { updateProject } from '../data/projects.js';
-import { todayLocal } from '../lib/calc.js';
+import { almocoMinutos, todayLocal } from '../lib/calc.js';
 
 function hhmm(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -67,7 +67,7 @@ export default function JornadaRapida({ project, hours, setProject, onFill }) {
         date: dataLocal(inicio),
         start_time: hhmm(inicio),
         end_time: hhmm(fim),
-        lunch: horas >= HORAS_COM_ALMOCO
+        almoco_minutos: horas >= HORAS_COM_ALMOCO ? project.almoco_padrao_minutos ?? 60 : 0
       });
     } catch (err) {
       setErro('Não foi possível parar: ' + err.message);
@@ -95,7 +95,7 @@ export default function JornadaRapida({ project, hours, setProject, onFill }) {
       date: todayLocal(),
       start_time: ultima.start_time?.slice(0, 5) || '08:00',
       end_time: ultima.end_time?.slice(0, 5) || '17:00',
-      lunch: ultima.lunch ?? true,
+      almoco_minutos: almocoMinutos(ultima),
       description: '',
       km_ida: ultima.km_ida || '',
       km_volta: ultima.km_volta || '',

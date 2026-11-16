@@ -53,6 +53,7 @@ function projectFieldsFromBackup(backup) {
     hourly_rate: info.hourlyRate || 0,
     total_hours_sold: info.totalHoursSold || 0,
     tipo_controle_horas: info.tipo_controle_horas || 'estimativa',
+    almoco_padrao_minutos: info.almoco_padrao_minutos ?? 60,
     valor_fixo_projeto: info.valor_fixo_projeto ?? null,
     client_name: info.clientName || '',
     location: info.location || '',
@@ -230,12 +231,13 @@ async function insertBackupData(projectId, tipoProjeto, backup) {
 
   if (hours.length) {
     const rows = hours.map(
-      ({ date, startTime, endTime, lunch, hours: h, description, kmIda, kmVolta, valorKm, pedagio, stageKey }) => ({
+      ({ date, startTime, endTime, lunch, almocoMinutos, hours: h, description, kmIda, kmVolta, valorKm, pedagio, stageKey }) => ({
         project_id: projectId,
         date,
         start_time: startTime,
         end_time: endTime,
         lunch: lunch ?? true,
+        almoco_minutos: almocoMinutos ?? (lunch === false ? 0 : 60),
         hours: h,
         description: description || null,
         km_ida: kmIda || 0,

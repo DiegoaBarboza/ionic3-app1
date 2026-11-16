@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../lib/supabaseClient.js', () => ({ supabase: {} }));
 
 import {
+  almocoMinutos,
+  formatAlmoco,
   calcHoras,
   calcReembolso,
   formatDate,
@@ -51,6 +53,28 @@ describe('horas da jornada (calcHoras)', () => {
   it('jornada que vira a noite', () => expect(calcHoras('22:00', '02:00', false)).toBe(4));
   it('nunca fica negativa', () => expect(calcHoras('08:00', '08:30', true)).toBe(0));
   it('sem horário dá zero', () => expect(calcHoras('', '17:00', true)).toBe(0));
+  it('almoço de 30 min', () => expect(calcHoras('08:00', '17:00', 30)).toBe(8.5));
+  it('almoço de 1h30', () => expect(calcHoras('08:00', '17:00', 90)).toBe(7.5));
+  it('almoço 0 = sem almoço', () => expect(calcHoras('08:00', '17:00', 0)).toBe(9));
+});
+
+describe('almoço configurável', () => {
+  it('registro antigo: lunch=true vale 60 min, false vale 0', () => {
+    expect(almocoMinutos({ lunch: true })).toBe(60);
+    expect(almocoMinutos({ lunch: false })).toBe(0);
+  });
+  it('registro novo usa almoco_minutos (mesmo com lunch)', () => {
+    expect(almocoMinutos({ lunch: true, almoco_minutos: 30 })).toBe(30);
+    expect(almocoMinutos({ lunch: false, almoco_minutos: 0 })).toBe(0);
+  });
+  it.each([
+    [0, 'Não'],
+    [30, '30 min'],
+    [45, '45 min'],
+    [60, '1h'],
+    [90, '1h30'],
+    [120, '2h']
+  ])('%s min -> "%s"', (m, txt) => expect(formatAlmoco(m)).toBe(txt));
 });
 
 describe('reembolso de deslocamento', () => {

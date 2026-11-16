@@ -117,7 +117,8 @@ function projetoOriginal() {
     { id: 'en-2', type: 'gasto', category: 'diversos', amount: 1200, date: '2026-10-08', receipt_url: 'r.jpg' }
   ];
   const hours = [
-    { date: '2026-10-07', start_time: '08:00', end_time: '17:00', lunch: true, hours: 8, stage_id: 'st-b', km_ida: 10 }
+    { date: '2026-10-07', start_time: '08:00', end_time: '17:00', lunch: true, hours: 8, stage_id: 'st-b', km_ida: 10 },
+    { date: '2026-10-08', start_time: '08:00', end_time: '17:00', lunch: true, almoco_minutos: 30, hours: 8.5, stage_id: 'st-b' }
   ];
   const encomendas = [
     { id: 'enc-1', descricao: 'Robô', fornecedor_id: 'forn-1', tipo: 'peca_comprada', prazo_combinado: '2026-11-01' },
@@ -165,9 +166,11 @@ describe('backup -> restauração', () => {
     const montagem = etapas.find((s) => s.stage_key === 'montagem_mecanica');
     expect(montagem).toMatchObject({ planned_start: '2026-10-06', duracao_dias: 10, status: 'do' });
 
-    // hora volta ligada à etapa nova certa
-    const [hora] = doProjeto('hours');
+    // hora volta ligada à etapa nova certa, com o almoço certo (antigo = 60, novo = 30)
+    const [hora, hora2] = doProjeto('hours');
     expect(hora.stage_id).toBe(montagem.id);
+    expect(hora.almoco_minutos).toBe(60);
+    expect(hora2.almoco_minutos).toBe(30);
 
     // peças ligadas às encomendas recriadas, na ordem
     const encs = doProjeto('encomendas');
@@ -194,6 +197,7 @@ describe('backup -> restauração', () => {
     await overwriteProjectFromBackup(p.id, backup);
     const doProjeto = (t) => (db[t] || []).filter((r) => r.project_id === p.id);
     expect(doProjeto('entries')).toHaveLength(2);
+    expect(doProjeto('hours')).toHaveLength(2);
     expect(doProjeto('faturas')).toHaveLength(2);
     expect(doProjeto('pecas')).toHaveLength(3);
     expect(doProjeto('project_stages')).toHaveLength(12);

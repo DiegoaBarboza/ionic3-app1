@@ -1,4 +1,4 @@
-import { calcReembolso, categoryInfo, revenueCategoryInfo, todayLocal } from './calc.js';
+import { almocoMinutos, calcReembolso, categoryInfo, formatAlmoco, revenueCategoryInfo, todayLocal } from './calc.js';
 
 const MOEDA = '"R$" #,##0.00';
 const NUM2 = '#,##0.00';
@@ -134,7 +134,7 @@ export async function exportarHoras(project, hours, { inicio, fim, stages = [] }
       { value: toDate(h.date), format: DATA },
       (h.start_time || '').slice(0, 5),
       (h.end_time || '').slice(0, 5),
-      h.lunch ? 'Sim' : 'Não',
+      formatAlmoco(almocoMinutos(h)),
       { value: horas, format: NUM2 }
     ];
     if (isMaquina) row.push(area(h.stage_id));

@@ -1,4 +1,4 @@
-import { calcReembolso, formatDate, formatMoney } from './calc.js';
+import { almocoMinutos, calcReembolso, formatAlmoco, formatDate, formatMoney } from './calc.js';
 import { LOGO_DATA_URI } from './logo.js';
 
 function escapeHtml(str) {
@@ -24,7 +24,7 @@ export function buildHoursReportHtml({ project, hours, periodStart, periodEnd })
         <td>${formatDate(h.date)}</td>
         <td>${escapeHtml(h.start_time)}</td>
         <td>${escapeHtml(h.end_time)}</td>
-        <td>${h.lunch ? 'Sim' : 'Não'}</td>
+        <td>${formatAlmoco(almocoMinutos(h))}</td>
         <td>${h.hours}h</td>
         <td>${escapeHtml(h.description)}</td>
         ${temDeslocamento ? `<td>${formatMoney(calcReembolso(h))}</td>` : ''}

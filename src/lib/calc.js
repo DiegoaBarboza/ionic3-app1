@@ -15,18 +15,40 @@ function toMinutes(hhmm) {
   return h * 60 + m;
 }
 
+/** Opções de almoço do formulário de horas (minutos). */
+export const OPCOES_ALMOCO = [0, 30, 45, 60, 90, 120];
+
+/**
+ * Minutos de almoço de uma jornada. Registros antigos só têm `lunch`
+ * (true = 1h); os novos guardam `almoco_minutos`.
+ */
+export function almocoMinutos(h) {
+  if (h?.almoco_minutos != null && h.almoco_minutos !== '') return Number(h.almoco_minutos) || 0;
+  return h?.lunch ? 60 : 0;
+}
+
+/** "Não", "30 min", "1h", "1h30". */
+export function formatAlmoco(min) {
+  const m = Number(min) || 0;
+  if (m === 0) return 'Não';
+  if (m < 60) return `${m} min`;
+  const resto = m % 60;
+  return `${Math.floor(m / 60)}h${resto ? String(resto).padStart(2, '0') : ''}`;
+}
+
 /**
  * Calcula as horas trabalhadas entre startTime e endTime (formato "HH:MM").
  * Trata virada de dia (ex: início 22:00, fim 02:00) somando 24h ao intervalo,
- * e desconta 1h de almoço quando lunch=true.
+ * e desconta o almoço: `almoco` em minutos, ou booleano (true = 60 min,
+ * compatível com os registros antigos).
  */
-export function calcHoras(startTime, endTime, lunch) {
+export function calcHoras(startTime, endTime, almoco) {
   if (!startTime || !endTime) return 0;
   let start = toMinutes(startTime);
   let end = toMinutes(endTime);
   if (end <= start) end += 24 * 60;
   let minutes = end - start;
-  if (lunch) minutes -= 60;
+  minutes -= almoco === true ? 60 : Number(almoco) || 0;
   if (minutes < 0) minutes = 0;
   return Math.round((minutes / 60) * 100) / 100;
 }

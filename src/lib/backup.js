@@ -1,4 +1,4 @@
-import { todayLocal } from './calc.js';
+import { almocoMinutos, todayLocal } from './calc.js';
 function slugify(text) {
   return text
     .normalize('NFD')
@@ -36,6 +36,7 @@ export function buildBackupPayload(project, entries, hours, extra = {}) {
       tipo_projeto: project.tipo_projeto,
       status: project.status,
       tipo_controle_horas: project.tipo_controle_horas,
+      almoco_padrao_minutos: project.almoco_padrao_minutos,
       valor_fixo_projeto: project.valor_fixo_projeto,
       data_pedido: project.data_pedido,
       escopo_solicitado: project.escopo_solicitado,
@@ -58,18 +59,19 @@ export function buildBackupPayload(project, entries, hours, extra = {}) {
       state,
       receiptUrl: receipt_url
     })),
-    hours: hours.map(({ date, start_time, end_time, lunch, hours: h, description, km_ida, km_volta, valor_km, pedagio, stage_id }) => ({
-      date,
-      startTime: start_time,
-      endTime: end_time,
-      lunch,
-      hours: h,
-      description,
-      kmIda: km_ida,
-      kmVolta: km_volta,
-      valorKm: valor_km,
-      pedagio,
-      stageKey: stage_id ? stageKeyById[stage_id] || null : null
+    hours: hours.map((row) => ({
+      date: row.date,
+      startTime: row.start_time,
+      endTime: row.end_time,
+      lunch: row.lunch,
+      almocoMinutos: almocoMinutos(row),
+      hours: row.hours,
+      description: row.description,
+      kmIda: row.km_ida,
+      kmVolta: row.km_volta,
+      valorKm: row.valor_km,
+      pedagio: row.pedagio,
+      stageKey: row.stage_id ? stageKeyById[row.stage_id] || null : null
     })),
     stages: stages.map((s) => ({
       stageKey: s.stage_key,
